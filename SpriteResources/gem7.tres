@@ -1,0 +1,14 @@
+[gd_resource type="SpriteFrames" load_steps=2 format=3 uid="uid://cjleeapecaa4h"]
+
+[ext_resource type="Texture2D" uid="uid://bg524uvclr52i" path="res://Assets/Tiles/gem7.png" id="1_rt3c8"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_rt3c8")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]

@@ -1,0 +1,28 @@
+[gd_scene load_steps=3 format=3 uid="uid://dm6ajosw7mdoa"]
+
+[ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="1_wouoh"]
+[ext_resource type="Script" path="res://Scenes/GameBoard.cs" id="2_kldv4"]
+
+[node name="Main" type="Node2D"]
+
+[node name="Background" type="Node2D" parent="."]
+metadata/_edit_lock_ = true
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Background"]
+position = Vector2(960, 540)
+sprite_frames = ExtResource("1_wouoh")
+
+[node name="GameBoard" type="Node2D" parent="."]
+script = ExtResource("2_kldv4")
+
+[node name="DebugResetButton" type="Button" parent="GameBoard"]
+top_level = true
+offset_left = 1595.0
+offset_top = 866.0
+offset_right = 1700.0
+offset_bottom = 897.0
+scale = Vector2(2, 2)
+action_mode = 0
+text = "Debug Reset"
+
+[connection signal="pressed" from="GameBoard/DebugResetButton" to="GameBoard" method="OnDebugResetButtonPressed"]

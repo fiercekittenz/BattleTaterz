@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3 uid="uid://dj5tgpc3itkui"]
+
+[ext_resource type="Script" path="res://Objects/Grid/Tile.cs" id="1_7qfsm"]
+[ext_resource type="Texture2D" uid="uid://cqnskp20uqpte" path="res://Assets/Tiles/TempPuzzlePieceBorder.png" id="1_djrj3"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_bt4mi"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_djrj3")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[node name="Tile" type="Node2D"]
+script = ExtResource("1_7qfsm")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_bt4mi")
