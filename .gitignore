@@ -1,2 +1,18 @@
 # Godot 4+ specific ignores
 .godot/
+/.vs/BATTLETATERZ/v17/.futdcache.v2
+/.vs/BATTLETATERZ/v17/.suo
+/.vs/BATTLETATERZ/v17/Browse.VC.db
+/.vs/BATTLETATERZ/v17/Browse.VC.db-shm
+/.vs/BATTLETATERZ/v17/Browse.VC.db-wal
+/.vs/BATTLETATERZ/v17/Browse.VC.opendb
+/.vs/ProjectEvaluation/battletaterz.metadata.v5.2
+/.vs/ProjectEvaluation/battletaterz.projects.v5.2
+*.v2
+/.vs/BATTLETATERZ/FileContentIndex/22896c03-de47-4a35-ba2c-a8106ab90415.vsidx
+/.vs/BATTLETATERZ/FileContentIndex/28237306-6808-4404-bf81-27d59db8fa17.vsidx
+/.vs/BATTLETATERZ/FileContentIndex/3885953b-4a4b-428e-ae9b-b65076b41f0e.vsidx
+*.vsidx
+/.vs/BATTLETATERZ/FileContentIndex/b5812b60-ecca-46c6-a5a9-adb60f2bfa1b.vsidx
+/.vs/BATTLETATERZ/FileContentIndex/e91788f5-5d34-46a2-99d7-49a116e0e659.vsidx
+/.vs/BATTLETATERZ/FileContentIndex/28237306-6808-4404-bf81-27d59db8fa17.vsidx

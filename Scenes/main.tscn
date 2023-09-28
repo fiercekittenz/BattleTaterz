@@ -25,4 +25,15 @@ scale = Vector2(2, 2)
 action_mode = 0
 text = "Debug Reset"
 
+[node name="DebugEvaluateButton" type="Button" parent="GameBoard"]
+top_level = true
+custom_minimum_size = Vector2(105, 31)
+offset_left = 1595.0
+offset_top = 946.0
+offset_right = 1700.0
+offset_bottom = 977.0
+scale = Vector2(2, 2)
+text = "Evaluate"
+
 [connection signal="pressed" from="GameBoard/DebugResetButton" to="GameBoard" method="OnDebugResetButtonPressed"]
+[connection signal="pressed" from="GameBoard/DebugEvaluateButton" to="GameBoard" method="OnDebugEvaluateButtonPressed"]

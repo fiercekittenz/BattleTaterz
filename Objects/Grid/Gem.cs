@@ -10,16 +10,20 @@ public partial class Gem : Node2D
    /// </summary>
    public enum GemType
    {
-      PotatoCat      = 0,
-      Grogu          = 1,
-      GrilledCheese  = 2,
-      Claw           = 3,
-      Jon            = 4,
-      BurgerStaff    = 5,
-      Cupcake        = 6,
-      Sock           = 7,
+      PotatoCat            = 0,
+      BlueSquare           = 1,
+      GreenSquare          = 2,
+      GraySquare           = 3,
+      PurpleSquare         = 4,
+      RedSquare            = 5,
+      YellowSquare         = 6,
+      Sock                 = 7,
+      BlueBall             = 8,
+      GrayBall             = 9,
 
-      GemType_Count
+      GemType_Count,
+
+      UNKNOWN
    }
 
    /// <summary>

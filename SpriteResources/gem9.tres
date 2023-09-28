@@ -1,0 +1,14 @@
+[gd_resource type="SpriteFrames" load_steps=2 format=3 uid="uid://b2y0art6fd7ja"]
+
+[ext_resource type="Texture2D" uid="uid://bhmr2ckwdeetc" path="res://Assets/Tiles/ballGrey.png" id="1_faevo"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_faevo")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
