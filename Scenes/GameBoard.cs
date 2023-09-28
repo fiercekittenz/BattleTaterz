@@ -1,3 +1,4 @@
+using BattleTaterz.Objects.Grid;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -43,7 +44,13 @@ public partial class GameBoard : Node2D
       _screenSize = GetViewportRect().Size;
       _startPosition = GlobalPosition;
 
-      Generate();
+      while (true)
+      {
+         if (Generate())
+         {
+            break;
+         }
+      }
    }
 
    /// <summary>
@@ -95,8 +102,8 @@ public partial class GameBoard : Node2D
          }
       }
 
-      bool hasMatches = CheckForMatches();
-      if (hasMatches)
+      var matches = CheckForMatches();
+      if (matches.Any())
       {
          // We cannot use a board that has matches when it is first generated, because
          // it could cause a cascade of point aggregation that isn't attributed to the
@@ -133,55 +140,49 @@ public partial class GameBoard : Node2D
    /// <summary>
    /// Algorithm for checking the player's game board for matched gems.
    /// </summary>
-   public bool CheckForMatches()
+   public List<MatchDetails> CheckForMatches()
    {
-      bool hasMatches = false;
+      List<MatchDetails> matches = new List<MatchDetails>();
 
       for (int row = 0; row < TileCount; ++row)
       {
          for (int column = 0; column < TileCount; ++column)
          {
             // Evaluate horizontal-only
-            List<Tile> horizontalmatches = new List<Tile>();
+            List<MatchedTileInfo> horizontalmatches = new List<MatchedTileInfo>();
             if (ExamineTile(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Horizontal, ref horizontalmatches))
             {
-               foreach (var tile in horizontalmatches)
+               foreach (var matched in horizontalmatches)
                {
-                  var border = tile.GetNode<AnimatedSprite2D>("Border");
+                  var border = matched.TileRef?.GetNode<AnimatedSprite2D>("Border");
                   border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border1.tres");
                }
 
-               hasMatches = true;
+               matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal));
             }
 
             // Now evaluate vertical-only
-            List<Tile> verticalmatches = new List<Tile>();
+            List<MatchedTileInfo> verticalmatches = new List<MatchedTileInfo>();
             if (ExamineTile(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Vertical, ref verticalmatches))
             {
-               foreach (var tile in verticalmatches)
+               foreach (var matched in verticalmatches)
                {
-                  var border = tile.GetNode<AnimatedSprite2D>("Border");
+                  var border = matched.TileRef?.GetNode<AnimatedSprite2D>("Border");
                   border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border1.tres");
                }
 
-               hasMatches = true;
+               matches.Add(new MatchDetails(verticalmatches, EvaluationDirection.Vertical));
             }
          }
       }
 
-      return hasMatches;
+      return matches;
    }
 
    /// <summary>
    /// Evaluates the tile and moves on to the next based on the provided direction.
    /// </summary>
-   private enum EvaluationDirection
-   {
-      Horizontal,
-      Vertical,
-   };
-
-   private bool ExamineTile(int row, int column, Gem.GemType previousGem, EvaluationDirection direction, ref List<Tile> matches)
+   private bool ExamineTile(int row, int column, Gem.GemType previousGem, EvaluationDirection direction, ref List<MatchedTileInfo> matches)
    {
       if (row >= 0 && row < TileCount && column >= 0 && column < TileCount)
       {
@@ -192,7 +193,7 @@ public partial class GameBoard : Node2D
          {
             if (currentTile.GemRef.CurrentGem == previousGem || previousGem == Gem.GemType.UNKNOWN)
             {
-               matches.Add(currentTile);
+               matches.Add(new MatchedTileInfo(currentTile, row, column));
             }
             else if (previousGem != Gem.GemType.UNKNOWN && currentTile.GemRef.CurrentGem != previousGem)
             {
@@ -206,7 +207,6 @@ public partial class GameBoard : Node2D
                return false;
             }
 
-            // Look right.
             if (direction == EvaluationDirection.Horizontal)
             {
                int nextColumn = column + 1;
