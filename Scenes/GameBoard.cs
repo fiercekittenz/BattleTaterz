@@ -59,6 +59,8 @@ public partial class GameBoard : Node2D
    /// </summary>
    public bool Generate()
    {
+      GD.Print("Generate() Called");
+
       // Make the whole board invisible until we are done.
       Hide();
 
@@ -110,6 +112,7 @@ public partial class GameBoard : Node2D
       GlobalPosition = new Vector2(centeredX, centeredY);
 
       // Now show!
+      GD.Print("Showing!");
       Show();
 
       // The game's afoot!
@@ -225,7 +228,7 @@ public partial class GameBoard : Node2D
                int nextColumn = column + 1;
 
                // If we have reached the end of the row, see if we have enough horizontal matches.
-               if (nextColumn >= (TileCount - 1))
+               if (nextColumn >= TileCount)
                {
                   if (matches.Count >= MinimumMatchCount)
                   {
@@ -245,7 +248,7 @@ public partial class GameBoard : Node2D
                int nextRow = row + 1;
 
                // If we have reached the end of the column, see if we have enough vertical matches.
-               if (nextRow >= (TileCount - 1))
+               if (nextRow >= TileCount)
                {
                   if (matches.Count >= MinimumMatchCount)
                   {
