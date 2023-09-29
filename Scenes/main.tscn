@@ -17,10 +17,10 @@ script = ExtResource("2_kldv4")
 
 [node name="DebugResetButton" type="Button" parent="GameBoard"]
 top_level = true
-offset_left = 1595.0
-offset_top = 866.0
-offset_right = 1700.0
-offset_bottom = 897.0
+offset_left = 1594.0
+offset_top = 793.0
+offset_right = 1734.0
+offset_bottom = 824.0
 scale = Vector2(2, 2)
 action_mode = 0
 text = "Debug Reset"
@@ -28,12 +28,23 @@ text = "Debug Reset"
 [node name="DebugEvaluateButton" type="Button" parent="GameBoard"]
 top_level = true
 custom_minimum_size = Vector2(105, 31)
-offset_left = 1595.0
-offset_top = 946.0
-offset_right = 1700.0
-offset_bottom = 977.0
+offset_left = 1592.0
+offset_top = 870.0
+offset_right = 1732.0
+offset_bottom = 901.0
 scale = Vector2(2, 2)
 text = "Evaluate"
 
+[node name="DebugHandleMatchesButton" type="Button" parent="GameBoard"]
+top_level = true
+offset_left = 1592.0
+offset_top = 947.0
+offset_right = 1732.0
+offset_bottom = 978.0
+scale = Vector2(2, 2)
+text = "Handle Matches
+"
+
 [connection signal="pressed" from="GameBoard/DebugResetButton" to="GameBoard" method="OnDebugResetButtonPressed"]
 [connection signal="pressed" from="GameBoard/DebugEvaluateButton" to="GameBoard" method="OnDebugEvaluateButtonPressed"]
+[connection signal="pressed" from="GameBoard/DebugHandleMatchesButton" to="GameBoard" method="OnDebugHandleMatchesButtonPressed"]

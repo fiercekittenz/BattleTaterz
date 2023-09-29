@@ -32,6 +32,11 @@ public partial class GameBoard : Node2D
    [Export]
    public int MinimumMatchCount { get; set; } = 3;
 
+   /// <summary>
+   /// The current score.
+   /// </summary>
+   public int Score { get; set; } = 0;
+
    #endregion
 
    #region Public Methods
@@ -44,13 +49,16 @@ public partial class GameBoard : Node2D
       _screenSize = GetViewportRect().Size;
       _startPosition = GlobalPosition;
 
-      while (true)
-      {
-         if (Generate())
-         {
-            break;
-         }
-      }
+      //TODO - temp removal
+      //while (true)
+      //{
+      //   if (Generate())
+      //   {
+      //      break;
+      //   }
+      //}
+
+      Generate();
    }
 
    /// <summary>
@@ -73,7 +81,7 @@ public partial class GameBoard : Node2D
       Clear();
 
       // Reinstantiate the game board grid with the tile count as it may have been changed.
-      _gameBoard = new Tile[TileSize, TileSize];
+      _gameBoard = new Tile[TileCount, TileCount];
 
       // Iterate and create rows, columns, and the gems for each tile.
       for (int row = 0; row < TileCount; ++row)
@@ -89,8 +97,20 @@ public partial class GameBoard : Node2D
                var gem = GD.Load<PackedScene>("res://Objects/Grid/Gem.tscn").Instantiate<Gem>();
                if (gem != null)
                {
-                  int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
-                  gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
+                  //TODO temp debug code for collapse algorithm
+                  if (column >= 0 && column <= 2 && row == 3)
+                  {
+                     gem.CurrentGem = Gem.GemType.Sock;
+                  }
+                  else if (row >= 5 && row <= 7 && column == 2)
+                  {
+                     gem.CurrentGem = Gem.GemType.RedSquare;
+                  }
+                  else
+                  {
+                     int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
+                     gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
+                  }
 
                   tile.GemRef = gem;
                   tile.AddChild(gem);
@@ -102,14 +122,15 @@ public partial class GameBoard : Node2D
          }
       }
 
-      var matches = CheckForMatches();
-      if (matches.Any())
-      {
-         // We cannot use a board that has matches when it is first generated, because
-         // it could cause a cascade of point aggregation that isn't attributed to the
-         // player's intelligence.
-         return false;
-      }
+      //TODO - temp removal
+      //var matches = CheckForMatches();
+      //if (matches.Any())
+      //{
+      //   // We cannot use a board that has matches when it is first generated, because
+      //   // it could cause a cascade of point aggregation that isn't attributed to the
+      //   // player's intelligence.
+      //   return false;
+      //}
 
       // Reposition the entire board.
       float centeredX = (_screenSize.X / 2) - ((TileSize * TileCount) / 2);
@@ -178,6 +199,46 @@ public partial class GameBoard : Node2D
 
       return matches;
    }
+
+   #endregion
+
+   #region Debug Methods
+
+   /// <summary>
+   /// A debug button action to generate a whole new board.
+   /// </summary>
+   public void OnDebugResetButtonPressed()
+   {
+      //TODO - temp removal
+      //while (true)
+      //{
+      //   if (Generate())
+      //   {
+      //      break;
+      //   }
+      //}
+      Generate();
+   }
+
+   /// <summary>
+   /// A debug button for evaluating matches on the current board.
+   /// </summary>
+   public void OnDebugEvaluateButtonPressed()
+   {
+      _debugTempMatchList = CheckForMatches();
+   }
+
+   /// <summary>
+   /// A debug button for handling the matches found in the previous evaluation.
+   /// </summary>
+   public void OnDebugHandleMatchesButtonPressed()
+   {
+      HandleMatches(_debugTempMatchList);
+   }
+
+   #endregion
+
+   #region Private Methods
 
    /// <summary>
    /// Evaluates the tile and moves on to the next based on the provided direction.
@@ -248,25 +309,115 @@ public partial class GameBoard : Node2D
    }
 
    /// <summary>
-   /// A debug button action to generate a whole new board.
+   /// Handles the matches by going through each tile matched, calculating the score, removing, and replacing tiles
+   /// by shifting downward.
    /// </summary>
-   public void OnDebugResetButtonPressed()
+   private void HandleMatches(List<MatchDetails> matches)
    {
-      while (true)
+      if (!matches.Any())
       {
-         if (Generate())
+         return;
+      }
+
+      foreach (var match in matches)
+      {
+         // Remove the matched tiles from the board.
+         foreach (var tile in match.Tiles)
          {
+            //TODO - basic scoring for now, but will want to make this more elaborate later.
+            ++Score;
+
+            // Remove the tile node from the scene.
+            RemoveChild(tile.TileRef);
+
+            // Remove the tile from the game board grid.
+            _gameBoard[tile.Row, tile.Column] = null;
+         }
+      }
+
+      // Collapse the board such that null tiles are only above valid tiles.
+      for (int column = 0; column < TileCount; ++column)
+      {
+         CollapseColumn((TileCount - 1), column);
+      }
+
+      //TODO
+      // After all holes are plugged with new tiles, evaluate the board for any bonus matches made through the drop.
+   }
+
+   private void CollapseColumn(int startingRow, int column)
+   {
+      // Move up the column starting from the specified row to
+      // find the first null entry in the grid. Once it has been
+      // identified, that will be the starting point for the collapse of
+      // the column.
+      for (int row = startingRow; row > 0; --row)
+      {
+         if (_gameBoard[row, column] == null)
+         {
+            CollapseTile(row, column, row /* cache in the recursive method the actual starting point */);
             break;
          }
       }
    }
 
    /// <summary>
-   /// A debug button for evaluating matches on the current board.
+   /// Moves the higher tile down, stomping the original tile and setting it to null.
    /// </summary>
-   public void OnDebugEvaluateButtonPressed()
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   private void CollapseTile(int row, int column, int startingRow)
    {
-      CheckForMatches();
+      int aboveRow = row - 1;
+      if (aboveRow >= 0)
+      { 
+         Tile currentTile = _gameBoard[row, column];
+
+         // If the tile above is valid, and the current tile is null, start the swap operation to compress.
+         Tile higherTile = _gameBoard[aboveRow, column];
+         if (higherTile != null && currentTile == null)
+         {
+            // Visually slide this tile down.
+            higherTile.GlobalPosition = new Vector2(higherTile.GlobalPosition.X, higherTile.GlobalPosition.Y + TileSize);
+
+            // Swap the data between grid slots to shift the non-null slot into the null.
+            _gameBoard[row, column] = _gameBoard[aboveRow, column];
+            _gameBoard[aboveRow, column] = null;
+
+            int belowRow = row + 1;
+            if (belowRow > TileCount && _gameBoard[belowRow, column] == null)
+            {
+               CollapseTile(belowRow, column, startingRow);
+            }
+            else
+            {
+               CollapseTile(row, column, startingRow);
+            }
+         }
+         // Else, we need to continue to move up until we have a valid higher tile and a potential null.
+         else
+         {
+            CollapseTile(aboveRow, column, startingRow);
+         }
+      }
+      else if (_gameBoard[startingRow, column] == null)
+      {
+         // If we're still null at the bottom, see if there are any more tiles to compress down.
+         // If there are any tiles, start all over again until we've moved everything down.
+         bool compressionComplete = true;
+         for (int check = startingRow; check >= 0; --check)
+         {
+            if (_gameBoard[check, column] != null)
+            {
+               compressionComplete = false;
+            }
+         }
+
+         if (!compressionComplete)
+         { 
+            CollapseTile(startingRow, column, startingRow);
+         }
+      }
    }
 
    #endregion
@@ -281,6 +432,9 @@ public partial class GameBoard : Node2D
 
    // Grid layout representation of the game board.
    private Tile[,] _gameBoard;
+
+   // Temporary debug list for holding the matches while sussing out the algorithm for replacement.
+   private List<MatchDetails> _debugTempMatchList;
 
    #endregion
 }
