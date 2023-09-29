@@ -49,16 +49,13 @@ public partial class GameBoard : Node2D
       _screenSize = GetViewportRect().Size;
       _startPosition = GlobalPosition;
 
-      //TODO - temp removal
-      //while (true)
-      //{
-      //   if (Generate())
-      //   {
-      //      break;
-      //   }
-      //}
-
-      Generate();
+      while (true)
+      {
+         if (Generate())
+         {
+            break;
+         }
+      }
    }
 
    /// <summary>
@@ -97,20 +94,8 @@ public partial class GameBoard : Node2D
                var gem = GD.Load<PackedScene>("res://Objects/Grid/Gem.tscn").Instantiate<Gem>();
                if (gem != null)
                {
-                  //TODO temp debug code for collapse algorithm
-                  if (column >= 0 && column <= 2 && row == 3)
-                  {
-                     gem.CurrentGem = Gem.GemType.Sock;
-                  }
-                  else if (row >= 5 && row <= 7 && column == 2)
-                  {
-                     gem.CurrentGem = Gem.GemType.RedSquare;
-                  }
-                  else
-                  {
-                     int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
-                     gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
-                  }
+                  int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
+                  gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
 
                   tile.GemRef = gem;
                   tile.AddChild(gem);
@@ -122,15 +107,14 @@ public partial class GameBoard : Node2D
          }
       }
 
-      //TODO - temp removal
-      //var matches = CheckForMatches();
-      //if (matches.Any())
-      //{
-      //   // We cannot use a board that has matches when it is first generated, because
-      //   // it could cause a cascade of point aggregation that isn't attributed to the
-      //   // player's intelligence.
-      //   return false;
-      //}
+      var matches = CheckForMatches();
+      if (matches.Any())
+      {
+         // We cannot use a board that has matches when it is first generated, because
+         // it could cause a cascade of point aggregation that isn't attributed to the
+         // player's intelligence.
+         return false;
+      }
 
       // Reposition the entire board.
       float centeredX = (_screenSize.X / 2) - ((TileSize * TileCount) / 2);
@@ -209,15 +193,13 @@ public partial class GameBoard : Node2D
    /// </summary>
    public void OnDebugResetButtonPressed()
    {
-      //TODO - temp removal
-      //while (true)
-      //{
-      //   if (Generate())
-      //   {
-      //      break;
-      //   }
-      //}
-      Generate();
+      while (true)
+      {
+         if (Generate())
+         {
+            break;
+         }
+      }
    }
 
    /// <summary>
@@ -338,14 +320,14 @@ public partial class GameBoard : Node2D
       // Collapse the board such that null tiles are only above valid tiles.
       for (int column = 0; column < TileCount; ++column)
       {
-         CollapseColumn((TileCount - 1), column);
+         CompressColumn((TileCount - 1), column);
       }
 
       //TODO
       // After all holes are plugged with new tiles, evaluate the board for any bonus matches made through the drop.
    }
 
-   private void CollapseColumn(int startingRow, int column)
+   private void CompressColumn(int startingRow, int column)
    {
       // Move up the column starting from the specified row to
       // find the first null entry in the grid. Once it has been
@@ -355,7 +337,7 @@ public partial class GameBoard : Node2D
       {
          if (_gameBoard[row, column] == null)
          {
-            CollapseTile(row, column, row /* cache in the recursive method the actual starting point */);
+            CollapseTiles(row, column, row /* cache in the recursive method the actual starting point */);
             break;
          }
       }
@@ -366,7 +348,7 @@ public partial class GameBoard : Node2D
    /// </summary>
    /// <param name="row"></param>
    /// <param name="column"></param>
-   private void CollapseTile(int row, int column, int startingRow)
+   private void CollapseTiles(int row, int column, int startingRow)
    {
       int aboveRow = row - 1;
       if (aboveRow >= 0)
@@ -385,19 +367,19 @@ public partial class GameBoard : Node2D
             _gameBoard[aboveRow, column] = null;
 
             int belowRow = row + 1;
-            if (belowRow > TileCount && _gameBoard[belowRow, column] == null)
+            if (belowRow < TileCount && _gameBoard[belowRow, column] == null)
             {
-               CollapseTile(belowRow, column, startingRow);
+               CollapseTiles(belowRow, column, startingRow);
             }
             else
             {
-               CollapseTile(row, column, startingRow);
+               CollapseTiles(row, column, startingRow);
             }
          }
          // Else, we need to continue to move up until we have a valid higher tile and a potential null.
          else
          {
-            CollapseTile(aboveRow, column, startingRow);
+            CollapseTiles(aboveRow, column, startingRow);
          }
       }
       else if (_gameBoard[startingRow, column] == null)
@@ -415,7 +397,7 @@ public partial class GameBoard : Node2D
 
          if (!compressionComplete)
          { 
-            CollapseTile(startingRow, column, startingRow);
+            CollapseTiles(startingRow, column, startingRow);
          }
       }
    }
