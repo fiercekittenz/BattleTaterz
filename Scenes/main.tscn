@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://dm6ajosw7mdoa"]
+[gd_scene load_steps=4 format=3 uid="uid://dm6ajosw7mdoa"]
 
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="1_wouoh"]
 [ext_resource type="Script" path="res://Scenes/GameBoard.cs" id="2_kldv4"]
+[ext_resource type="AudioStream" uid="uid://bhl3om8fj2s8w" path="res://Assets/Audio/Compress.wav" id="3_xpaan"]
 
 [node name="Main" type="Node2D"]
 
@@ -17,23 +18,13 @@ script = ExtResource("2_kldv4")
 
 [node name="DebugResetButton" type="Button" parent="GameBoard"]
 top_level = true
-offset_left = 1594.0
-offset_top = 793.0
-offset_right = 1734.0
-offset_bottom = 824.0
+offset_left = 1590.0
+offset_top = 869.0
+offset_right = 1730.0
+offset_bottom = 900.0
 scale = Vector2(2, 2)
 action_mode = 0
 text = "Debug Reset"
-
-[node name="DebugEvaluateButton" type="Button" parent="GameBoard"]
-top_level = true
-custom_minimum_size = Vector2(105, 31)
-offset_left = 1592.0
-offset_top = 870.0
-offset_right = 1732.0
-offset_bottom = 901.0
-scale = Vector2(2, 2)
-text = "Evaluate"
 
 [node name="DebugHandleMatchesButton" type="Button" parent="GameBoard"]
 top_level = true
@@ -45,6 +36,8 @@ scale = Vector2(2, 2)
 text = "Handle Matches
 "
 
+[node name="MainAudio_Compressed" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_xpaan")
+
 [connection signal="pressed" from="GameBoard/DebugResetButton" to="GameBoard" method="OnDebugResetButtonPressed"]
-[connection signal="pressed" from="GameBoard/DebugEvaluateButton" to="GameBoard" method="OnDebugEvaluateButtonPressed"]
 [connection signal="pressed" from="GameBoard/DebugHandleMatchesButton" to="GameBoard" method="OnDebugHandleMatchesButtonPressed"]

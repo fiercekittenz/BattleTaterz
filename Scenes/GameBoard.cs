@@ -49,6 +49,8 @@ public partial class GameBoard : Node2D
       _screenSize = GetViewportRect().Size;
       _startPosition = GlobalPosition;
 
+      _mainAudioRef = GetParent().GetNode<AudioStreamPlayer>("MainAudio_Compressed");
+
       while (true)
       {
          if (Generate())
@@ -85,25 +87,7 @@ public partial class GameBoard : Node2D
       {
          for (int column = 0; column < TileCount; ++column)
          {
-            var tile = GD.Load<PackedScene>("res://Objects/Grid/Tile.tscn").Instantiate<Tile>();
-            if (tile != null)
-            {
-               AddChild(tile);
-               tile.GlobalPosition = new Vector2(column * TileSize, row * TileSize);
-
-               var gem = GD.Load<PackedScene>("res://Objects/Grid/Gem.tscn").Instantiate<Gem>();
-               if (gem != null)
-               {
-                  int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
-                  gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
-
-                  tile.GemRef = gem;
-                  tile.AddChild(gem);
-                  gem.GlobalPosition = new Vector2(column * TileSize, row * TileSize);
-               }
-
-               _gameBoard[row, column] = tile;
-            }
+            GenerateTile(row, column);
          }
       }
 
@@ -203,19 +187,23 @@ public partial class GameBoard : Node2D
    }
 
    /// <summary>
-   /// A debug button for evaluating matches on the current board.
-   /// </summary>
-   public void OnDebugEvaluateButtonPressed()
-   {
-      _debugTempMatchList = CheckForMatches();
-   }
-
-   /// <summary>
    /// A debug button for handling the matches found in the previous evaluation.
    /// </summary>
    public void OnDebugHandleMatchesButtonPressed()
    {
-      HandleMatches(_debugTempMatchList);
+      bool working = true;
+      while (working)
+      {
+         var matches = CheckForMatches();
+         if (matches.Any())
+         { 
+            HandleMatches(_debugTempMatchList);
+         }
+         else
+         {
+            break;
+         }
+      }
    }
 
    #endregion
@@ -298,6 +286,7 @@ public partial class GameBoard : Node2D
    {
       if (!matches.Any())
       {
+         // No matches! Exit.
          return;
       }
 
@@ -329,13 +318,14 @@ public partial class GameBoard : Node2D
             if (_gameBoard[row, column] == null)
             {
                CompressColumn(row, column, row /* cache in the recursive method the actual starting point */);
+               _mainAudioRef.Play();
                break;
             }
          }
       }
 
-      //TODO
       // After all holes are plugged with new tiles, evaluate the board for any bonus matches made through the drop.
+      ReplaceRemovedTiles();
    }
 
    /// <summary>
@@ -398,6 +388,54 @@ public partial class GameBoard : Node2D
       }
    }
 
+   /// <summary>
+   /// Goes through the board and replaces any instances of a null entry with a new tile and random gem.
+   /// </summary>
+   private void ReplaceRemovedTiles()
+   {
+      for (int row = 0; row < TileCount; ++row)
+      {
+         for (int column = 0; column < TileCount; ++column)
+         {
+            if (_gameBoard[row, column] == null)
+            {
+               GenerateTile(row, column);
+            }
+         }
+      }
+   }
+
+   /// <summary>
+   /// Generates a tile at the specified grid location.
+   /// </summary>
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   /// <exception cref="Exception"></exception>
+   private void GenerateTile(int row, int column)
+   {
+      var tile = GD.Load<PackedScene>("res://Objects/Grid/Tile.tscn").Instantiate<Tile>();
+      if (tile == null)
+      {
+         throw new Exception("Could not instantiate tile.");
+      }
+
+      AddChild(tile);
+      tile.GlobalPosition = new Vector2(column * TileSize, row * TileSize);
+
+      var gem = GD.Load<PackedScene>("res://Objects/Grid/Gem.tscn").Instantiate<Gem>();
+      if (gem != null)
+      {
+         int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
+         gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
+
+         tile.GemRef = gem;
+         tile.AddChild(gem);
+         gem.GlobalPosition = new Vector2(column * TileSize, row * TileSize);
+      }
+
+      _gameBoard[row, column] = tile;
+   }
+
    #endregion
 
    #region Private Members
@@ -413,6 +451,9 @@ public partial class GameBoard : Node2D
 
    // Temporary debug list for holding the matches while sussing out the algorithm for replacement.
    private List<MatchDetails> _debugTempMatchList;
+
+   // Local ref to the main audio streamer for sounds.
+   private AudioStreamPlayer _mainAudioRef;
 
    #endregion
 }
