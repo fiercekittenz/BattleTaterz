@@ -320,35 +320,31 @@ public partial class GameBoard : Node2D
       // Collapse the board such that null tiles are only above valid tiles.
       for (int column = 0; column < TileCount; ++column)
       {
-         CompressColumn((TileCount - 1), column);
+         // Move up the column starting from the bottom row to
+         // find the first null entry in the grid. Once it has been
+         // identified, that will be the starting point for the collapse of
+         // the column.
+         for (int row = (TileCount - 1); row > 0; --row)
+         {
+            if (_gameBoard[row, column] == null)
+            {
+               CompressColumn(row, column, row /* cache in the recursive method the actual starting point */);
+               break;
+            }
+         }
       }
 
       //TODO
       // After all holes are plugged with new tiles, evaluate the board for any bonus matches made through the drop.
    }
 
-   private void CompressColumn(int startingRow, int column)
-   {
-      // Move up the column starting from the specified row to
-      // find the first null entry in the grid. Once it has been
-      // identified, that will be the starting point for the collapse of
-      // the column.
-      for (int row = startingRow; row > 0; --row)
-      {
-         if (_gameBoard[row, column] == null)
-         {
-            CollapseTiles(row, column, row /* cache in the recursive method the actual starting point */);
-            break;
-         }
-      }
-   }
-
    /// <summary>
-   /// Moves the higher tile down, stomping the original tile and setting it to null.
+   /// Moves the higher tiles down, stomping the original tile and setting it to null until the only null
+   /// tiles left are above compressed tiles.
    /// </summary>
    /// <param name="row"></param>
    /// <param name="column"></param>
-   private void CollapseTiles(int row, int column, int startingRow)
+   private void CompressColumn(int row, int column, int startingRow)
    {
       int aboveRow = row - 1;
       if (aboveRow >= 0)
@@ -369,17 +365,17 @@ public partial class GameBoard : Node2D
             int belowRow = row + 1;
             if (belowRow < TileCount && _gameBoard[belowRow, column] == null)
             {
-               CollapseTiles(belowRow, column, startingRow);
+               CompressColumn(belowRow, column, startingRow);
             }
             else
             {
-               CollapseTiles(row, column, startingRow);
+               CompressColumn(row, column, startingRow);
             }
          }
          // Else, we need to continue to move up until we have a valid higher tile and a potential null.
          else
          {
-            CollapseTiles(aboveRow, column, startingRow);
+            CompressColumn(aboveRow, column, startingRow);
          }
       }
       else if (_gameBoard[startingRow, column] == null)
@@ -397,7 +393,7 @@ public partial class GameBoard : Node2D
 
          if (!compressionComplete)
          { 
-            CollapseTiles(startingRow, column, startingRow);
+            CompressColumn(startingRow, column, startingRow);
          }
       }
    }
