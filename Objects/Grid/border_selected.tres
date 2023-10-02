@@ -1,0 +1,14 @@
+[gd_resource type="SpriteFrames" load_steps=2 format=3 uid="uid://cenlqvxwnuf00"]
+
+[ext_resource type="Texture2D" uid="uid://cqvlc0wakaa3t" path="res://Assets/Tiles/TempPuzzlePieceBorder_Selected.png" id="1_c847r"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_c847r")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]

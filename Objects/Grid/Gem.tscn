@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://c3xu8n4crct4d"]
+[gd_scene load_steps=5 format=3 uid="uid://c3xu8n4crct4d"]
 
 [ext_resource type="Script" path="res://Objects/Grid/Gem.cs" id="1_vx2c8"]
 [ext_resource type="Texture2D" uid="uid://xyi2x4ira65j" path="res://Assets/Tiles/gem0.png" id="2_25ufi"]
@@ -14,9 +14,22 @@ animations = [{
 "speed": 5.0
 }]
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_6ht3i"]
+size = Vector2(40, 40)
+
 [node name="Gem" type="Node2D"]
 script = ExtResource("1_vx2c8")
 
 [node name="Sprite" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_i83ru")
 frame_progress = 0.227887
+
+[node name="MouseDetector" type="Area2D" parent="."]
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MouseDetector"]
+shape = SubResource("RectangleShape2D_6ht3i")
+
+[connection signal="input_event" from="MouseDetector" to="." method="OnMouseDetectorInputEvent"]
+[connection signal="mouse_entered" from="MouseDetector" to="." method="OnMouseDetectorMouseEntered"]
+[connection signal="mouse_exited" from="MouseDetector" to="." method="OnMouseDetectorMouseExited"]

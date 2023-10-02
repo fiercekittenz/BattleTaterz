@@ -122,6 +122,7 @@ public partial class GameBoard : Node2D
       var tiles = GetChildren().OfType<Tile>().ToList();
       foreach (var tile in tiles)
       {
+         tile.GemRef.OnGemMouseEvent -= Gem_OnGemMouseEvent;
          RemoveChild(tile);
       }
    }
@@ -137,6 +138,8 @@ public partial class GameBoard : Node2D
       {
          for (int column = 0; column < TileCount; ++column)
          {
+            //TODO tidy this up by making a function for the innards
+
             // Evaluate horizontal-only
             List<MatchedTileInfo> horizontalmatches = new List<MatchedTileInfo>();
             if (ExamineTile(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Horizontal, ref horizontalmatches))
@@ -144,7 +147,7 @@ public partial class GameBoard : Node2D
                foreach (var matched in horizontalmatches)
                {
                   var border = matched.TileRef?.GetNode<AnimatedSprite2D>("Border");
-                  border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border1.tres");
+                  border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
                }
 
                matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal));
@@ -157,7 +160,7 @@ public partial class GameBoard : Node2D
                foreach (var matched in verticalmatches)
                {
                   var border = matched.TileRef?.GetNode<AnimatedSprite2D>("Border");
-                  border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border1.tres");
+                  border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
                }
 
                matches.Add(new MatchDetails(verticalmatches, EvaluationDirection.Vertical));
@@ -166,6 +169,16 @@ public partial class GameBoard : Node2D
       }
 
       return matches;
+   }
+
+   /// <summary>
+   /// Swaps the primary and secondary tiles provided.
+   /// </summary>
+   /// <param name="primaryr"></param>
+   /// <param name="secondary"></param>
+   public void SwapSelectedTiles(Tile primary, Tile secondary)
+   {
+      //TODO need lookup to find the tiles in the gameboard array
    }
 
    #endregion
@@ -191,19 +204,19 @@ public partial class GameBoard : Node2D
    /// </summary>
    public void OnDebugHandleMatchesButtonPressed()
    {
-      bool working = true;
-      while (working)
-      {
-         var matches = CheckForMatches();
-         if (matches.Any())
-         { 
-            HandleMatches(_debugTempMatchList);
-         }
-         else
-         {
-            break;
-         }
-      }
+      //bool working = true;
+      //while (working)
+      //{
+      //   var matches = CheckForMatches();
+      //   if (matches.Any())
+      //   {
+      //      HandleMatches(_debugTempMatchList);
+      //   }
+      //   else
+      //   {
+      //      break;
+      //   }
+      //}
    }
 
    #endregion
@@ -297,6 +310,7 @@ public partial class GameBoard : Node2D
          {
             //TODO - basic scoring for now, but will want to make this more elaborate later.
             ++Score;
+            GetNode<Label>("ScoreValue").Text = Score.ToString();
 
             // Remove the tile node from the scene.
             RemoveChild(tile.TileRef);
@@ -338,7 +352,7 @@ public partial class GameBoard : Node2D
    {
       int aboveRow = row - 1;
       if (aboveRow >= 0)
-      { 
+      {
          Tile currentTile = _gameBoard[row, column];
 
          // If the tile above is valid, and the current tile is null, start the swap operation to compress.
@@ -382,7 +396,7 @@ public partial class GameBoard : Node2D
          }
 
          if (!compressionComplete)
-         { 
+         {
             CompressColumn(startingRow, column, startingRow);
          }
       }
@@ -427,6 +441,7 @@ public partial class GameBoard : Node2D
       {
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
          gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
+         gem.OnGemMouseEvent += Gem_OnGemMouseEvent;
 
          tile.GemRef = gem;
          tile.AddChild(gem);
@@ -434,6 +449,70 @@ public partial class GameBoard : Node2D
       }
 
       _gameBoard[row, column] = tile;
+   }
+   
+   /// <summary>
+   /// Handle mouse events that have bubbled up from a gem.
+   /// </summary>
+   /// <param name="sender"></param>
+   /// <param name="e"></param>
+   private void Gem_OnGemMouseEvent(object sender, BattleTaterz.Utility.GemMouseEventArgs e)
+   {
+      if (sender is Gem gem)
+      {
+         Tile parentTile = gem.GetParent<Tile>();
+         if (parentTile != null)
+         {
+            switch (e.EventType)
+            {
+               case BattleTaterz.Utility.GemMouseEventArgs.MouseEventType.Enter:
+                  {
+                     if (parentTile != _primarySelection && parentTile != _secondarySelection)
+                     {
+                        var border = parentTile.GetNode<AnimatedSprite2D>("Border");
+                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_hover.tres");
+                     }
+                  }
+                  break;
+               case BattleTaterz.Utility.GemMouseEventArgs.MouseEventType.Leave:
+                  {
+                     if (parentTile != _primarySelection && parentTile != _secondarySelection)
+                     {
+                        var border = parentTile.GetNode<AnimatedSprite2D>("Border");
+                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_default.tres");
+                     }
+                  }
+                  break;
+               case BattleTaterz.Utility.GemMouseEventArgs.MouseEventType.Click:
+                  {
+                     if (_primarySelection == null && parentTile != _primarySelection)
+                     {
+                        _primarySelection = parentTile;
+                        var border = parentTile.GetNode<AnimatedSprite2D>("Border");
+                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
+                     }
+                     else if (_secondarySelection == null && parentTile != _secondarySelection)
+                     {
+                        //TODO - make sure the parentTile is actually next to the primary selection
+                        _secondarySelection = parentTile;
+                        var border = parentTile.GetNode<AnimatedSprite2D>("Border");
+                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
+                     }
+
+                     if (_primarySelection != null && _secondarySelection != null)
+                     {
+
+                     }
+                  }
+                  break;
+               default:
+                  {
+                     // do nothing
+                  }
+                  break;
+            }
+         }
+      }
    }
 
    #endregion
@@ -449,11 +528,12 @@ public partial class GameBoard : Node2D
    // Grid layout representation of the game board.
    private Tile[,] _gameBoard;
 
-   // Temporary debug list for holding the matches while sussing out the algorithm for replacement.
-   private List<MatchDetails> _debugTempMatchList;
-
    // Local ref to the main audio streamer for sounds.
    private AudioStreamPlayer _mainAudioRef;
+
+   // Selected tiles for swap consideration.
+   private Tile _primarySelection;
+   private Tile _secondarySelection;
 
    #endregion
 }
