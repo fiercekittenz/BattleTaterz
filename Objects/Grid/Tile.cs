@@ -8,7 +8,13 @@ public partial class Tile : Node2D
    /// <summary>
    /// Reference to the Gem assigned to this tile.
    /// </summary>
-   public Gem GemRef { get; set; } = null;
+   public Gem GemRef { get; private set; } = null;
+
+   /// <summary>
+   /// References to the row and column where this tile resides.
+   /// </summary>
+   public int Row { get; set; } = 0;
+   public int Column { get; set; } = 0;
 
    #endregion
 
@@ -27,6 +33,33 @@ public partial class Tile : Node2D
    /// <param name="delta"></param>
    public override void _Process(double delta)
    {
+   }
+
+   /// <summary>
+   /// Sets the gem reference property value and moves it into position.
+   /// </summary>
+   /// <param name="gem"></param>
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   /// <param name="tileSize"></param>
+   public void SetGemReference(Gem gem, int row, int column, int tileSize)
+   {
+      GemRef = gem;
+      AddChild(gem);
+      gem.GlobalPosition = new Vector2(column * tileSize, row * tileSize);
+   }
+
+   /// <summary>
+   /// Moves the tile to a specific position based on the row and column.
+   /// </summary>
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   /// <param name="tileSize"></param>
+   public void MoveTile(int row, int column, int tileSize)
+   {
+      Row = row;
+      Column = column;
+      GlobalPosition = new Vector2(column * tileSize, row * tileSize);
    }
 
    #endregion

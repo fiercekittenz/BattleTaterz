@@ -53,8 +53,10 @@ public partial class GameBoard : Node2D
 
       while (true)
       {
+         GD.Print("Generating...");
          if (Generate())
          {
+            GD.Print("done generating");
             break;
          }
       }
@@ -360,7 +362,8 @@ public partial class GameBoard : Node2D
          if (higherTile != null && currentTile == null)
          {
             // Visually slide this tile down.
-            higherTile.GlobalPosition = new Vector2(higherTile.GlobalPosition.X, higherTile.GlobalPosition.Y + TileSize);
+            higherTile.MoveTile(row, column, TileSize);
+            //higherTile.GlobalPosition = new Vector2(higherTile.GlobalPosition.X, higherTile.GlobalPosition.Y + TileSize);
 
             // Swap the data between grid slots to shift the non-null slot into the null.
             _gameBoard[row, column] = _gameBoard[aboveRow, column];
@@ -433,8 +436,8 @@ public partial class GameBoard : Node2D
          throw new Exception("Could not instantiate tile.");
       }
 
-      AddChild(tile);
-      tile.GlobalPosition = new Vector2(column * TileSize, row * TileSize);
+      tile.MoveTile(row, column, TileSize);
+      AddChild(tile);      
 
       var gem = GD.Load<PackedScene>("res://Objects/Grid/Gem.tscn").Instantiate<Gem>();
       if (gem != null)
@@ -443,9 +446,7 @@ public partial class GameBoard : Node2D
          gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
          gem.OnGemMouseEvent += Gem_OnGemMouseEvent;
 
-         tile.GemRef = gem;
-         tile.AddChild(gem);
-         gem.GlobalPosition = new Vector2(column * TileSize, row * TileSize);
+         tile.SetGemReference(gem, row, column, TileSize);
       }
 
       _gameBoard[row, column] = tile;
