@@ -119,6 +119,11 @@ public partial class GameBoard : Node2D
    /// </summary>
    public void Clear()
    {
+      // Reset any selections prior to clearing the board.
+      _primarySelection = null;
+      _secondarySelection = null;
+
+      // Persist the position.
       GlobalPosition = _startPosition;
 
       var tiles = GetChildren().OfType<Tile>().ToList();
