@@ -51,7 +51,8 @@ public partial class GameBoard : Node2D
       _startPosition = GlobalPosition;
       _uiNode = GetNode<Godot.Node2D>("UI");
 
-      _mainAudioRef = GetParent().GetNode<AudioStreamPlayer>("MainAudio_Compressed");
+      _compressAudioRef = GetParent().GetNode<AudioStreamPlayer>("MainAudio_Compressed");
+      _selectionAudioRef = GetParent().GetNode<AudioStreamPlayer>("MainAudio_Selection");
 
       while (true)
       {
@@ -174,11 +175,11 @@ public partial class GameBoard : Node2D
             List<MatchedTileInfo> horizontalmatches = new List<MatchedTileInfo>();
             if (ExamineTile(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Horizontal, ref horizontalmatches))
             {
-               foreach (var matched in horizontalmatches)
-               {
-                  var border = matched.TileRef?.GetNode<AnimatedSprite2D>("Border");
-                  border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
-               }
+               //foreach (var matched in horizontalmatches)
+               //{
+               //   var border = matched.TileRef?.GetNode<AnimatedSprite2D>("Border");
+               //   border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
+               //}
 
                matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal));
             }
@@ -187,11 +188,11 @@ public partial class GameBoard : Node2D
             List<MatchedTileInfo> verticalmatches = new List<MatchedTileInfo>();
             if (ExamineTile(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Vertical, ref verticalmatches))
             {
-               foreach (var matched in verticalmatches)
-               {
-                  var border = matched.TileRef?.GetNode<AnimatedSprite2D>("Border");
-                  border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
-               }
+               //foreach (var matched in verticalmatches)
+               //{
+               //   var border = matched.TileRef?.GetNode<AnimatedSprite2D>("Border");
+               //   border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
+               //}
 
                matches.Add(new MatchDetails(verticalmatches, EvaluationDirection.Vertical));
             }
@@ -218,30 +219,36 @@ public partial class GameBoard : Node2D
       Vector2 originalPrimaryPosition = new Vector2(primary.GlobalPosition.X, primary.GlobalPosition.Y);
       Vector2 originalSecondaryPosition = new Vector2(secondary.GlobalPosition.X, secondary.GlobalPosition.Y);
 
-      // Swap primary and secondary selections.
+      // Swap primary and secondary selections in the game board, only. Don't waste cycles moving
+      // and triggering rendering until we know if matches are found as a result.
       _gameBoard[originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2] = secondary;
-      primary.UpdateCoordinates(originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2);
-      primary.GlobalPosition = originalSecondaryPosition;
-
       _gameBoard[originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2] = primary;
-      secondary.UpdateCoordinates(originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2);
-      secondary.GlobalPosition = originalPrimaryPosition;
 
-      //TODO 
-      // - verify the swap will lead to a match
-      // - trigger a swap animation, but swap BACK if there won't be a match
-      // - handle matches
-
-      // Handle any matches.
+      // Verify the swap will lead to a match.
       List<MatchDetails> matches = CheckForMatches();
       if (matches.Any())
       {
+         // Matches found, so go ahead and swap positions.
+         primary.UpdateCoordinates(originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2);
+         primary.GlobalPosition = originalSecondaryPosition;
+
+         secondary.UpdateCoordinates(originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2);
+         secondary.GlobalPosition = originalPrimaryPosition;
+
+         // Handle the results of the matches.
          HandleMatches(matches);
       }
+      else
+      {
+         // No matches. Swap everything back to the original positions and play a womp womp sound.
+         _gameBoard[originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2] = primary;
+         _gameBoard[originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2] = secondary;
+      }
 
-      // Clear the selections.
+      // Clear any selections.
       ClearSelection();
 
+      // Toggle processing back on for mouse events.
       _isProcessingTurn = false;
    }
 
@@ -268,19 +275,19 @@ public partial class GameBoard : Node2D
    /// </summary>
    public void OnDebugHandleMatchesButtonPressed()
    {
-      //bool working = true;
-      //while (working)
-      //{
-      //   var matches = CheckForMatches();
-      //   if (matches.Any())
-      //   {
-      //      HandleMatches(_debugTempMatchList);
-      //   }
-      //   else
-      //   {
-      //      break;
-      //   }
-      //}
+      bool working = true;
+      while (working)
+      {
+         var matches = CheckForMatches();
+         if (matches.Any())
+         {
+            HandleMatches(matches);
+         }
+         else
+         {
+            break;
+         }
+      }
    }
 
    #endregion
@@ -423,7 +430,7 @@ public partial class GameBoard : Node2D
             if (_gameBoard[row, column] == null)
             {
                CompressColumn(row, column, row /* cache in the recursive method the actual starting point */);
-               _mainAudioRef.Play();
+               _compressAudioRef.Play();
                break;
             }
          }
@@ -431,6 +438,13 @@ public partial class GameBoard : Node2D
 
       // After all holes are plugged with new tiles, evaluate the board for any bonus matches made through the drop.
       ReplaceRemovedTiles();
+
+      //TODO - testing this; need to keep checking for matches after the collapse until no more matches are found.
+      var newMatches = CheckForMatches();
+      if (newMatches.Any())
+      {
+         HandleMatches(newMatches);
+      }
    }
 
    /// <summary>
@@ -578,12 +592,14 @@ public partial class GameBoard : Node2D
                         _primarySelection = parentTile;
                         var border = parentTile.GetNode<AnimatedSprite2D>("Border");
                         border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
+                        _selectionAudioRef.Play();
                      }
                      else if (_secondarySelection == null && parentTile != _secondarySelection)
                      {
                         _secondarySelection = parentTile;
                         var border = parentTile.GetNode<AnimatedSprite2D>("Border");
                         border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
+                        _selectionAudioRef.Play();
                      }
 
                      if (_primarySelection != null && _secondarySelection != null)
@@ -618,8 +634,9 @@ public partial class GameBoard : Node2D
    // Grid layout representation of the game board.
    private Tile[,] _gameBoard;
 
-   // Local ref to the main audio streamer for sounds.
-   private AudioStreamPlayer _mainAudioRef;
+   // Local ref to the compress sound.
+   private AudioStreamPlayer _compressAudioRef;
+   private AudioStreamPlayer _selectionAudioRef;
 
    // Selected tiles for swap consideration.
    private Tile _primarySelection;
