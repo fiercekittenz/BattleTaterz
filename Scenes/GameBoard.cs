@@ -2,6 +2,7 @@ using BattleTaterz.Objects.Grid;
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 
 public partial class GameBoard : Node2D
@@ -48,6 +49,7 @@ public partial class GameBoard : Node2D
    {
       _screenSize = GetViewportRect().Size;
       _startPosition = GlobalPosition;
+      _uiNode = GetNode<Godot.Node2D>("UI");
 
       _mainAudioRef = GetParent().GetNode<AudioStreamPlayer>("MainAudio_Compressed");
 
@@ -135,6 +137,27 @@ public partial class GameBoard : Node2D
    }
 
    /// <summary>
+   /// Clears the current selection.
+   /// </summary>
+   public void ClearSelection()
+   {
+      if (_primarySelection != null)
+      {
+         var border = _primarySelection.GetNode<AnimatedSprite2D>("Border");
+         border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_default.tres");
+      }
+
+      if (_secondarySelection != null)
+      {
+         var border = _secondarySelection.GetNode<AnimatedSprite2D>("Border");
+         border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_default.tres");
+      }
+
+      _primarySelection = null;
+      _secondarySelection = null;
+   }
+
+   /// <summary>
    /// Algorithm for checking the player's game board for matched gems.
    /// </summary>
    public List<MatchDetails> CheckForMatches()
@@ -181,11 +204,45 @@ public partial class GameBoard : Node2D
    /// <summary>
    /// Swaps the primary and secondary tiles provided.
    /// </summary>
-   /// <param name="primaryr"></param>
+   /// <param name="primary"></param>
    /// <param name="secondary"></param>
    public void SwapSelectedTiles(Tile primary, Tile secondary)
    {
-      //TODO need lookup to find the tiles in the gameboard array
+      // Flag the game as processing so it doesn't handle mouse events.
+      _isProcessingTurn = true;
+
+      // Cache the game board coordinates and positions of each before swapping.
+      Tuple<int, int> originalPrimaryCoordinates = new Tuple<int, int>(primary.Row, primary.Column);
+      Tuple<int, int> originalSecondaryCoordinates = new Tuple<int, int>(secondary.Row, secondary.Column);
+
+      Vector2 originalPrimaryPosition = new Vector2(primary.GlobalPosition.X, primary.GlobalPosition.Y);
+      Vector2 originalSecondaryPosition = new Vector2(secondary.GlobalPosition.X, secondary.GlobalPosition.Y);
+
+      // Swap primary and secondary selections.
+      _gameBoard[originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2] = secondary;
+      primary.UpdateCoordinates(originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2);
+      primary.GlobalPosition = originalSecondaryPosition;
+
+      _gameBoard[originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2] = primary;
+      secondary.UpdateCoordinates(originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2);
+      secondary.GlobalPosition = originalPrimaryPosition;
+
+      //TODO 
+      // - verify the swap will lead to a match
+      // - trigger a swap animation, but swap BACK if there won't be a match
+      // - handle matches
+
+      // Handle any matches.
+      List<MatchDetails> matches = CheckForMatches();
+      if (matches.Any())
+      {
+         HandleMatches(matches);
+      }
+
+      // Clear the selections.
+      ClearSelection();
+
+      _isProcessingTurn = false;
    }
 
    #endregion
@@ -229,6 +286,27 @@ public partial class GameBoard : Node2D
    #endregion
 
    #region Private Methods
+
+   /// <summary>
+   /// Given a list of Tile objects, locate their row and column coordinates in the game board and return them as a list of tuples.
+   /// </summary>
+   /// <param name="tilesToLocate"></param>
+   /// <returns>A list of tuples representing the coordinates of the tiles in the provided list.</returns>
+   private Tuple<int, int> GetTileCoordinates(Tile tileToLocate)
+   {
+      for (int row = 0; row < TileCount; ++row)
+      {
+         for (int column = 0; column < TileCount; ++column)
+         {
+            if (_gameBoard[row, column] == tileToLocate)
+            {
+               return new Tuple<int, int>(row, column);
+            }
+         }
+      }
+
+      return null;
+   }
 
    /// <summary>
    /// Evaluates the tile and moves on to the next based on the provided direction.
@@ -317,7 +395,13 @@ public partial class GameBoard : Node2D
          {
             //TODO - basic scoring for now, but will want to make this more elaborate later.
             ++Score;
-            GetNode<Label>("ScoreValue").Text = Score.ToString();
+            _uiNode.GetNode<Godot.Label>("ScoreVal").Text = Score.ToString();
+
+            // Remove all of the event handlers from the tile and gem before removing from the scene.
+            if (tile.TileRef != null && tile.TileRef.GemRef != null)
+            {
+               tile.TileRef.GemRef.OnGemMouseEvent -= Gem_OnGemMouseEvent;
+            }
 
             // Remove the tile node from the scene.
             RemoveChild(tile.TileRef);
@@ -368,7 +452,6 @@ public partial class GameBoard : Node2D
          {
             // Visually slide this tile down.
             higherTile.MoveTile(row, column, TileSize);
-            //higherTile.GlobalPosition = new Vector2(higherTile.GlobalPosition.X, higherTile.GlobalPosition.Y + TileSize);
 
             // Swap the data between grid slots to shift the non-null slot into the null.
             _gameBoard[row, column] = _gameBoard[aboveRow, column];
@@ -441,8 +524,8 @@ public partial class GameBoard : Node2D
          throw new Exception("Could not instantiate tile.");
       }
 
+      AddChild(tile);
       tile.MoveTile(row, column, TileSize);
-      AddChild(tile);      
 
       var gem = GD.Load<PackedScene>("res://Objects/Grid/Gem.tscn").Instantiate<Gem>();
       if (gem != null)
@@ -450,13 +533,12 @@ public partial class GameBoard : Node2D
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
          gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
          gem.OnGemMouseEvent += Gem_OnGemMouseEvent;
-
          tile.SetGemReference(gem, row, column, TileSize);
       }
 
       _gameBoard[row, column] = tile;
    }
-   
+
    /// <summary>
    /// Handle mouse events that have bubbled up from a gem.
    /// </summary>
@@ -464,7 +546,7 @@ public partial class GameBoard : Node2D
    /// <param name="e"></param>
    private void Gem_OnGemMouseEvent(object sender, BattleTaterz.Utility.GemMouseEventArgs e)
    {
-      if (sender is Gem gem)
+      if (sender is Gem gem && !_isProcessingTurn)
       {
          Tile parentTile = gem.GetParent<Tile>();
          if (parentTile != null)
@@ -499,7 +581,6 @@ public partial class GameBoard : Node2D
                      }
                      else if (_secondarySelection == null && parentTile != _secondarySelection)
                      {
-                        //TODO - make sure the parentTile is actually next to the primary selection
                         _secondarySelection = parentTile;
                         var border = parentTile.GetNode<AnimatedSprite2D>("Border");
                         border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
@@ -507,7 +588,7 @@ public partial class GameBoard : Node2D
 
                      if (_primarySelection != null && _secondarySelection != null)
                      {
-
+                        SwapSelectedTiles(_primarySelection, _secondarySelection);
                      }
                   }
                   break;
@@ -525,6 +606,9 @@ public partial class GameBoard : Node2D
 
    #region Private Members
 
+   // Cache of the UI node so we don't have to look for it every time we need to access a UI element.
+   private Node2D _uiNode = null;
+
    // Cache of the starting position for the board's top-leftmost corner.
    private Vector2 _startPosition = new Vector2(0, 0);
 
@@ -540,6 +624,9 @@ public partial class GameBoard : Node2D
    // Selected tiles for swap consideration.
    private Tile _primarySelection;
    private Tile _secondarySelection;
+
+   // Boolean flag to denote the game is processing a play and should not handle mouse events.
+   private bool _isProcessingTurn = false;
 
    #endregion
 }

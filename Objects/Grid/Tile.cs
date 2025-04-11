@@ -46,7 +46,18 @@ public partial class Tile : Node2D
    {
       GemRef = gem;
       AddChild(gem);
-      gem.GlobalPosition = new Vector2(column * tileSize, row * tileSize);
+      gem.Position = new Vector2(0, 0);
+   }
+
+   /// <summary>
+   /// Sets the row and column coordinates for the tile.
+   /// </summary>
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   public void UpdateCoordinates(int row, int column)
+   {
+      Row = row;
+      Column = column;
    }
 
    /// <summary>
@@ -59,7 +70,8 @@ public partial class Tile : Node2D
    {
       Row = row;
       Column = column;
-      GlobalPosition = new Vector2(column * tileSize, row * tileSize);
+
+      Position = new Vector2(column * tileSize, row * tileSize);
    }
 
    #endregion

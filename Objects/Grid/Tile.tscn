@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://dj5tgpc3itkui"]
 
-[ext_resource type="Script" path="res://Objects/Grid/Tile.cs" id="1_7qfsm"]
+[ext_resource type="Script" uid="uid://b3fa25iywywsr" path="res://Objects/Grid/Tile.cs" id="1_7qfsm"]
 [ext_resource type="SpriteFrames" uid="uid://qbq6mnkgmutr" path="res://Objects/Grid/border_default.tres" id="2_3mxlu"]
 
 [node name="Tile" type="Node2D"]
