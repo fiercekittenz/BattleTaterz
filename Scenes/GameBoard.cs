@@ -316,7 +316,97 @@ public partial class GameBoard : Node2D
    }
 
    /// <summary>
-   /// Evaluates the tile and moves on to the next based on the provided direction.
+   /// Examines the provided tile coordinates to determine if it could be moved to make a match.
+   /// Movement prediction is actually very simple. Using the game board array, adding and subtracting
+   /// to access surrounding tiles for evaluation is very performant. It looks like a lot of code, but
+   /// the underlying instructions are not complex.
+   /// </summary>
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   /// <param name="gemType"></param>
+   /// <returns>The direction in which the tile may be moved to make a match. Returns MoveDirection.NONE if no move is detected.</returns>
+   private MoveDirection IsPotentialMatch(int row, int column, Gem.GemType gemType)
+   {
+      // Potential Move Type: Linear Slide (x o x x)
+      {
+         // Look left.
+         if (column >= 3 &&
+             _gameBoard[row, column - 1].GemRef.CurrentGem != gemType &&
+             _gameBoard[row, column - 2].GemRef.CurrentGem == gemType &&
+             _gameBoard[row, column - 3].GemRef.CurrentGem == gemType)
+         {
+            return MoveDirection.Left;
+         }
+
+         // Look right.
+         if (column <= TileCount - 4 &&
+             _gameBoard[row, column + 1].GemRef.CurrentGem != gemType &&
+             _gameBoard[row, column + 2].GemRef.CurrentGem == gemType &&
+             _gameBoard[row, column + 3].GemRef.CurrentGem == gemType)
+         {
+            return MoveDirection.Right;
+         }
+
+         // Look up.
+         if (row >= 3 &&
+             _gameBoard[row - 1, column].GemRef.CurrentGem != gemType &&
+             _gameBoard[row - 2, column].GemRef.CurrentGem == gemType &&
+             _gameBoard[row - 3, column].GemRef.CurrentGem == gemType)
+         {
+            return MoveDirection.Up;
+         }
+
+         // Look down.
+         if (row <= TileCount - 4 &&
+             _gameBoard[row + 1, column].GemRef.CurrentGem != gemType &&
+             _gameBoard[row + 2, column].GemRef.CurrentGem == gemType &&
+             _gameBoard[row + 3, column].GemRef.CurrentGem == gemType)
+         {
+            return MoveDirection.Down;
+         }
+      }
+
+      // Potential Move Type: Wedge Slide (x o x -> move another x in from above or below the middle tile)
+      {
+         // Look left.
+         if (column >= 1 && column < TileCount && row >= 1 && row < TileCount - 1 &&
+             _gameBoard[row - 1, column - 1].GemRef.CurrentGem == gemType &&
+             _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType)
+         {
+            return MoveDirection.Left;
+         }
+
+         // Look right.
+         if (column >= 0 && column < TileCount - 1 && row >= 1 && row < TileCount - 1 &&
+             _gameBoard[row - 1, column + 1].GemRef.CurrentGem == gemType &&
+             _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
+         {
+            return MoveDirection.Right;
+         }
+
+         // Look up.
+         if (column >= 1 && column < TileCount - 1 && row >= 1 && row < TileCount - 1 &&
+             _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType &&
+             _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
+         {
+            return MoveDirection.Up;
+         }
+
+         // Look down.
+         if (column >= 1 && column < TileCount - 1 && row >= 0 && row < TileCount - 1 &&
+             _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType &&
+             _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
+         {
+            return MoveDirection.Down;
+         }
+      }
+
+      return MoveDirection.NONE;
+   }
+
+   /// <summary>
+   /// Evaluates the tile for existing matches and moves on to the next based on the provided direction.
+   /// Note: Does not predict the potential of a match using this tile, only the existance of a valid match in the present.
    /// </summary>
    private bool ExamineTile(int row, int column, Gem.GemType previousGem, EvaluationDirection direction, ref List<MatchedTileInfo> matches)
    {
