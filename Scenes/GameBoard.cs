@@ -7,6 +7,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Object representing an individual game board. There may be multiple game boards present at any given time (e.g. Multiplayer).
+/// </summary>
 public partial class GameBoard : Node2D
 {
    #region Public Properties
@@ -60,21 +63,22 @@ public partial class GameBoard : Node2D
       _startPosition = GlobalPosition;
       _uiNode = GetNode<Godot.Node2D>("UI");
 
-      _selectionAudioRef = GetParent().GetNode<AudioStreamPlayer>("MainAudio_Selection");
+      _audioNode = GetParent().GetNode<Node>("Audio");
 
       // Start game background music.
-      var backgroundMusic = GetParent().GetNode<AudioStreamPlayer>("MainAudio_BackgroundMusic");
+      var backgroundMusic = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_BackgroundMusic");
       backgroundMusic?.Play();
 
       while (true)
       {
-         GD.Print("Generating...");
          if (Generate())
          {
-            GD.Print("done generating");
             break;
          }
       }
+
+      // The game board is now ready for input.
+      _isReady = true;
    }
 
    /// <summary>
@@ -126,8 +130,13 @@ public partial class GameBoard : Node2D
       Show();
 
       // Play a sound to indicate that the board is ready for play.
-      var boardReadySound = GetParent().GetNode<AudioStreamPlayer>("MainAudio_GameBoardReady");
-      boardReadySound?.Play();
+      // Do not play this at the very beginning of the game, only when the board has been regenerated
+      // due to no valid moves.
+      if (!_isReady)
+      {
+         var boardReadySound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_GameBoardReady");
+         boardReadySound?.Play();
+      }
 
       // The game's afoot!
       return true;
@@ -270,7 +279,7 @@ public partial class GameBoard : Node2D
          _gameBoard[originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2] = primary;
          _gameBoard[originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2] = secondary;
 
-         var badMoveSound = GetParent().GetNode<AudioStreamPlayer>("MainAudio_BadMove");
+         var badMoveSound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_BadMove");
          badMoveSound?.Play();
       }
 
@@ -286,7 +295,7 @@ public partial class GameBoard : Node2D
             // No moves are possible with the current board.
             // A new board needs to be generated.
             //TODO - figure out how this should be handled in multiplayer battle scenarios. It isn't the player's fault if this happens.
-            var noMoreMovesSound = GetParent().GetNode<AudioStreamPlayer>("MainAudio_NoMoreMoves");
+            var noMoreMovesSound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_NoMoreMoves");
             noMoreMovesSound?.Play();
          }
       }
@@ -579,7 +588,7 @@ public partial class GameBoard : Node2D
 
       // Play an escalating sound chime.
       string soundName = $"Sound_MatchHypeLevel{level}";
-      var soundToPlay = GetParent().GetNode<AudioStreamPlayer>(soundName);
+      var soundToPlay = _audioNode.GetNode<AudioStreamPlayer>(soundName);
       soundToPlay?.Play();
 
       // Need to keep checking for matches after the collapse until no more matches are found.
@@ -737,25 +746,34 @@ public partial class GameBoard : Node2D
                   break;
                case BattleTaterz.Utility.GemMouseEventArgs.MouseEventType.Click:
                   {
+                     bool selectionMade = false;
+
                      if (_primarySelection == null && parentTile != _primarySelection)
                      {
                         _primarySelection = parentTile;
-                        var border = parentTile.GetNode<AnimatedSprite2D>("Border");
-                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
-                        _selectionAudioRef.Play();
+                        selectionMade = true;
                      }
                      else if (_secondarySelection == null && parentTile != _secondarySelection)
                      {
                         _secondarySelection = parentTile;
+                        selectionMade = true;
+                     }
+
+                     if (selectionMade)
+                     {
                         var border = parentTile.GetNode<AnimatedSprite2D>("Border");
                         border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
-                        _selectionAudioRef.Play();
+
+                        var selectionSound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_Selection");
+                        selectionSound.Play();
                      }
 
                      if (_primarySelection != null && _secondarySelection != null)
                      {
                         _isProcessingTurn = true;
-                        SwapSelectedTiles(_primarySelection, _secondarySelection);
+                        {
+                           SwapSelectedTiles(_primarySelection, _secondarySelection);
+                        }
                         _isProcessingTurn = false;
                      }
                   }
@@ -786,8 +804,8 @@ public partial class GameBoard : Node2D
    // Grid layout representation of the game board.
    private Tile[,] _gameBoard;
 
-   // Local ref to frequently used sounds.
-   private AudioStreamPlayer _selectionAudioRef;
+   // Local ref to the audio node.
+   private Node _audioNode;
 
    // Selected tiles for swap consideration.
    private Tile _primarySelection;
@@ -795,6 +813,10 @@ public partial class GameBoard : Node2D
 
    // Boolean flag to denote the game is processing a play and should not handle mouse events.
    private bool _isProcessingTurn = false;
+
+   // Boolean flag to indicate the board is ready for player input.
+   // Primarily used to block generation sounds at start-up.
+   private bool _isReady = false;
 
    #endregion
 }
