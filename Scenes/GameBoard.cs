@@ -212,14 +212,6 @@ public partial class GameBoard : Node2D
    {
       List<PotentialMoveInfo> possibleMoves = new List<PotentialMoveInfo>();
 
-      //TODO
-      // There are two cases where a move is possible:
-      //    1. Current tile is adjacent to a non-matching tile but the non-matching tile has 2 matching on its opposite side.
-      //    2. Current tile is adjacent to a non-matching tile, skip 1 and it does match, look at opposite sides of middle (non-matching) tile to see if it would match current tile.
-      //
-      // For each tile, look to the left/right/up/down 3 blocks.
-      // Evaluate for the possible match conditions.
-
       for (int row = 0; row < TileCount; ++row)
       {
          for (int column = 0; column < TileCount; ++column)
@@ -246,9 +238,6 @@ public partial class GameBoard : Node2D
    /// <param name="secondary"></param>
    public void SwapSelectedTiles(Tile primary, Tile secondary)
    {
-      // Flag the game as processing so it doesn't handle mouse events.
-      _isProcessingTurn = true;
-
       // Cache the game board coordinates and positions of each before swapping.
       Tuple<int, int> originalPrimaryCoordinates = new Tuple<int, int>(primary.Row, primary.Column);
       Tuple<int, int> originalSecondaryCoordinates = new Tuple<int, int>(secondary.Row, secondary.Column);
@@ -301,9 +290,6 @@ public partial class GameBoard : Node2D
             noMoreMovesSound?.Play();
          }
       }
-
-      // Toggle processing back on for mouse events.
-      _isProcessingTurn = false;
    }
 
    #endregion
@@ -381,6 +367,20 @@ public partial class GameBoard : Node2D
    /// <returns>The direction in which the tile may be moved to make a match. Returns MoveDirection.NONE if no move is detected.</returns>
    private MoveDirection IsPotentialMatch(int row, int column, Gem.GemType gemType)
    {
+      //
+      // Match 3 Prediction 101:
+      //
+      // There are two cases where a move is possible:
+      //
+      //    1. Current tile is adjacent to a non-matching tile but the non-matching tile
+      //       has 2 matching on its opposite side.
+      //    2. Current tile is adjacent to a non-matching tile, skip 1 and it does match,
+      //       look at opposite sides of middle (non-matching) tile to see if it would match
+      //       current tile.
+      //
+      // For each tile, look to the left/right/up/down and evaluate for the possible match conditions.
+      //
+
       // Potential Move Type: Linear Slide (x o x x)
       {
          // Look left.
@@ -754,7 +754,9 @@ public partial class GameBoard : Node2D
 
                      if (_primarySelection != null && _secondarySelection != null)
                      {
+                        _isProcessingTurn = true;
                         SwapSelectedTiles(_primarySelection, _secondarySelection);
+                        _isProcessingTurn = false;
                      }
                   }
                   break;
