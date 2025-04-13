@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 public partial class GameBoard : Node2D
 {
@@ -13,7 +15,7 @@ public partial class GameBoard : Node2D
    /// Represents the number of tiles in rows and columns for the game board.
    /// </summary>
    [Export]
-   public int TileCount { get; set; } = 8;
+   public int TileCount { get; set; } = 9;
 
    /// <summary>
    /// Defines the size of an individual tile in the grid.
@@ -34,6 +36,13 @@ public partial class GameBoard : Node2D
    public int MinimumMatchCount { get; set; } = 3;
 
    /// <summary>
+   /// The maximum number of hype levels for multiple cascading matches. There can be many more than this, but 
+   /// this value restricts the number of sounds played.
+   /// </summary>
+   [Export]
+   public int MaxHypeLevel { get; set; } = 3;
+
+   /// <summary>
    /// The current score.
    /// </summary>
    public int Score { get; set; } = 0;
@@ -51,7 +60,6 @@ public partial class GameBoard : Node2D
       _startPosition = GlobalPosition;
       _uiNode = GetNode<Godot.Node2D>("UI");
 
-      _compressAudioRef = GetParent().GetNode<AudioStreamPlayer>("MainAudio_Compressed");
       _selectionAudioRef = GetParent().GetNode<AudioStreamPlayer>("MainAudio_Selection");
 
       while (true)
@@ -113,6 +121,10 @@ public partial class GameBoard : Node2D
       // Now show!
       Show();
 
+      // Play a sound to indicate that the board is ready for play.
+      var boardReadySound = GetParent().GetNode<AudioStreamPlayer>("MainAudio_GameBoardReady");
+      boardReadySound?.Play();
+
       // The game's afoot!
       return true;
    }
@@ -169,37 +181,58 @@ public partial class GameBoard : Node2D
       {
          for (int column = 0; column < TileCount; ++column)
          {
-            //TODO tidy this up by making a function for the innards
-
             // Evaluate horizontal-only
             List<MatchedTileInfo> horizontalmatches = new List<MatchedTileInfo>();
-            if (ExamineTile(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Horizontal, ref horizontalmatches))
+            if (EvaluateTileForMatch(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Horizontal, ref horizontalmatches))
             {
-               //foreach (var matched in horizontalmatches)
-               //{
-               //   var border = matched.TileRef?.GetNode<AnimatedSprite2D>("Border");
-               //   border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
-               //}
-
                matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal));
             }
 
             // Now evaluate vertical-only
             List<MatchedTileInfo> verticalmatches = new List<MatchedTileInfo>();
-            if (ExamineTile(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Vertical, ref verticalmatches))
+            if (EvaluateTileForMatch(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Vertical, ref verticalmatches))
             {
-               //foreach (var matched in verticalmatches)
-               //{
-               //   var border = matched.TileRef?.GetNode<AnimatedSprite2D>("Border");
-               //   border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
-               //}
-
                matches.Add(new MatchDetails(verticalmatches, EvaluationDirection.Vertical));
             }
          }
       }
 
       return matches;
+   }
+
+   /// <summary>
+   /// Looks at the current state of the board's tiles and determines if there are possible moves.
+   /// </summary>
+   /// <returns>List of potential moves that could be played to create a match.</returns>
+   public List<PotentialMoveInfo> GetPossibleMoves()
+   {
+      List<PotentialMoveInfo> possibleMoves = new List<PotentialMoveInfo>();
+
+      //TODO
+      // There are two cases where a move is possible:
+      //    1. Current tile is adjacent to a non-matching tile but the non-matching tile has 2 matching on its opposite side.
+      //    2. Current tile is adjacent to a non-matching tile, skip 1 and it does match, look at opposite sides of middle (non-matching) tile to see if it would match current tile.
+      //
+      // For each tile, look to the left/right/up/down 3 blocks.
+      // Evaluate for the possible match conditions.
+
+      for (int row = 0; row < TileCount; ++row)
+      {
+         for (int column = 0; column < TileCount; ++column)
+         {
+            Tile currentTile = _gameBoard[row, column];
+            if (currentTile != null)
+            {
+               MoveDirection possibleDirection = IsPotentialMatch(row, column, currentTile.GemRef.CurrentGem);
+               if (possibleDirection != MoveDirection.NONE)
+               {
+                  possibleMoves.Add(new PotentialMoveInfo(currentTile, row, column, possibleDirection));
+               }
+            }
+         }
+      }
+
+      return possibleMoves;
    }
 
    /// <summary>
@@ -243,10 +276,27 @@ public partial class GameBoard : Node2D
          // No matches. Swap everything back to the original positions and play a womp womp sound.
          _gameBoard[originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2] = primary;
          _gameBoard[originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2] = secondary;
+
+         var badMoveSound = GetParent().GetNode<AudioStreamPlayer>("MainAudio_BadMove");
+         badMoveSound?.Play();
       }
 
       // Clear any selections.
       ClearSelection();
+
+      // If matches were found and handled, verify that the board still has playable moves.
+      if (matches.Any())
+      {
+         List<PotentialMoveInfo> potentialMoves = GetPossibleMoves();
+         if (!potentialMoves.Any())
+         {
+            // No moves are possible with the current board.
+            // A new board needs to be generated.
+            //TODO - figure out how this should be handled in multiplayer battle scenarios. It isn't the player's fault if this happens.
+            var noMoreMovesSound = GetParent().GetNode<AudioStreamPlayer>("MainAudio_NoMoreMoves");
+            noMoreMovesSound?.Play();
+         }
+      }
 
       // Toggle processing back on for mouse events.
       _isProcessingTurn = false;
@@ -408,12 +458,13 @@ public partial class GameBoard : Node2D
    /// Evaluates the tile for existing matches and moves on to the next based on the provided direction.
    /// Note: Does not predict the potential of a match using this tile, only the existance of a valid match in the present.
    /// </summary>
-   private bool ExamineTile(int row, int column, Gem.GemType previousGem, EvaluationDirection direction, ref List<MatchedTileInfo> matches)
+   private bool EvaluateTileForMatch(int row, int column, Gem.GemType previousGem, EvaluationDirection direction, ref List<MatchedTileInfo> matches)
    {
       if (row >= 0 && row < TileCount && column >= 0 && column < TileCount)
       {
          // Look at the current tile and compare against the previous tile. If the tile is
-         // of type "unknown" then add it to the matches list.
+         // of type "unknown" then add it to the matches list, because that is the starting gem for this check.
+         // The minimum match count check at the end will determine if there was truly a match or not.
          Tile currentTile = _gameBoard[row, column];
          if (currentTile != null)
          {
@@ -448,7 +499,7 @@ public partial class GameBoard : Node2D
                   return false;
                }
 
-               ExamineTile(row, nextColumn, currentTile.GemRef.CurrentGem, direction, ref matches);
+               EvaluateTileForMatch(row, nextColumn, currentTile.GemRef.CurrentGem, direction, ref matches);
             }
             else if (direction == EvaluationDirection.Vertical)
             {
@@ -465,7 +516,7 @@ public partial class GameBoard : Node2D
                   return false;
                }
 
-               ExamineTile(nextRow, column, currentTile.GemRef.CurrentGem, direction, ref matches);
+               EvaluateTileForMatch(nextRow, column, currentTile.GemRef.CurrentGem, direction, ref matches);
             }
          }
       }
@@ -477,23 +528,17 @@ public partial class GameBoard : Node2D
    /// Handles the matches by going through each tile matched, calculating the score, removing, and replacing tiles
    /// by shifting downward.
    /// </summary>
-   private void HandleMatches(List<MatchDetails> matches)
+   private async void HandleMatches(List<MatchDetails> matches, int level = 1)
    {
-      if (!matches.Any())
-      {
-         // No matches! Exit.
-         return;
-      }
-
       foreach (var match in matches)
       {
+         // Update the score.
+         Score = Score + (match.Tiles.Count * level);
+         _uiNode.GetNode<Godot.Label>("ScoreVal").Text = Score.ToString();
+
          // Remove the matched tiles from the board.
          foreach (var tile in match.Tiles)
          {
-            //TODO - basic scoring for now, but will want to make this more elaborate later.
-            ++Score;
-            _uiNode.GetNode<Godot.Label>("ScoreVal").Text = Score.ToString();
-
             // Remove all of the event handlers from the tile and gem before removing from the scene.
             if (tile.TileRef != null && tile.TileRef.GemRef != null)
             {
@@ -520,7 +565,6 @@ public partial class GameBoard : Node2D
             if (_gameBoard[row, column] == null)
             {
                CompressColumn(row, column, row /* cache in the recursive method the actual starting point */);
-               _compressAudioRef.Play();
                break;
             }
          }
@@ -529,11 +573,23 @@ public partial class GameBoard : Node2D
       // After all holes are plugged with new tiles, evaluate the board for any bonus matches made through the drop.
       ReplaceRemovedTiles();
 
-      //TODO - testing this; need to keep checking for matches after the collapse until no more matches are found.
+      // Play an escalating sound chime.
+      string soundName = $"Sound_MatchHypeLevel{level}";
+      var soundToPlay = GetParent().GetNode<AudioStreamPlayer>(soundName);
+      soundToPlay?.Play();
+
+      // Need to keep checking for matches after the collapse until no more matches are found.
       var newMatches = CheckForMatches();
       if (newMatches.Any())
       {
-         HandleMatches(newMatches);
+         if (level >= MaxHypeLevel)
+         {
+            // Reset the level so the sounds will pitch up again.
+            level = 0;
+         }
+
+         await Task.Delay(TimeSpan.FromMilliseconds(500));
+         HandleMatches(newMatches, level + 1);
       }
    }
 
@@ -724,8 +780,7 @@ public partial class GameBoard : Node2D
    // Grid layout representation of the game board.
    private Tile[,] _gameBoard;
 
-   // Local ref to the compress sound.
-   private AudioStreamPlayer _compressAudioRef;
+   // Local ref to frequently used sounds.
    private AudioStreamPlayer _selectionAudioRef;
 
    // Selected tiles for swap consideration.
