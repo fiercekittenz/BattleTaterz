@@ -132,7 +132,7 @@ public partial class GameBoard : Node2D
       // Play a sound to indicate that the board is ready for play.
       // Do not play this at the very beginning of the game, only when the board has been regenerated
       // due to no valid moves.
-      if (!_isReady)
+      if (_isReady)
       {
          var boardReadySound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_GameBoardReady");
          boardReadySound?.Play();
