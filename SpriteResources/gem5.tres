@@ -1,12 +1,12 @@
-[gd_resource type="SpriteFrames" load_steps=2 format=3 uid="uid://2qepi1ejrk8n"]
+[gd_resource type="SpriteFrames" load_steps=2 format=3 uid="uid://ciuylq5i3wifs"]
 
-[ext_resource type="Texture2D" uid="uid://dxy4j3v6t48tm" path="res://Assets/Tiles/gem5.png" id="1_nth12"]
+[ext_resource type="Texture2D" uid="uid://ensd3385d5lr" path="res://Assets/Tiles/gem5.png" id="1_bpqpn"]
 
 [resource]
 animations = [{
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("1_nth12")
+"texture": ExtResource("1_bpqpn")
 }],
 "loop": true,
 "name": &"default",
