@@ -62,6 +62,10 @@ public partial class GameBoard : Node2D
 
       _selectionAudioRef = GetParent().GetNode<AudioStreamPlayer>("MainAudio_Selection");
 
+      // Start game background music.
+      var backgroundMusic = GetParent().GetNode<AudioStreamPlayer>("MainAudio_BackgroundMusic");
+      backgroundMusic?.Play();
+
       while (true)
       {
          GD.Print("Generating...");
