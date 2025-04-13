@@ -11,16 +11,12 @@ public partial class Gem : Node2D
    /// </summary>
    public enum GemType
    {
-      PotatoCat            = 0,
-      BlueSquare           = 1,
-      GreenSquare          = 2,
-      GraySquare           = 3,
-      PurpleSquare         = 4,
-      RedSquare            = 5,
-      YellowSquare         = 6,
-      Sock                 = 7,
-      BlueBall             = 8,
-      GrayBall             = 9,
+      PotatoCat,
+      BlueSquare,
+      GreenSquare,
+      PurpleSquare,
+      RedSquare,
+      YellowSquare,
 
       GemType_Count,
 
