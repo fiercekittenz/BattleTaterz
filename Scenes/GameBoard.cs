@@ -1,4 +1,7 @@
-using BattleTaterz.Objects.Grid;
+using BattleTaterz.Core;
+using BattleTaterz.Core.Enums;
+using BattleTaterz.Core.Gameplay;
+using BattleTaterz.Core.UI;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -33,12 +36,6 @@ public partial class GameBoard : Node2D
    public int GemSize { get; set; } = 32;
 
    /// <summary>
-   /// The minimum number of gems that need to match horizontally or vertically.
-   /// </summary>
-   [Export]
-   public int MinimumMatchCount { get; set; } = 3;
-
-   /// <summary>
    /// The maximum number of hype levels for multiple cascading matches. There can be many more than this, but 
    /// this value restricts the number of sounds played.
    /// </summary>
@@ -48,7 +45,7 @@ public partial class GameBoard : Node2D
    /// <summary>
    /// The current score.
    /// </summary>
-   public int Score { get; set; } = 0;
+   public Score Score { get; private set; } = new Score();
 
    #endregion
 
@@ -59,16 +56,23 @@ public partial class GameBoard : Node2D
    /// </summary>
    public override void _Ready()
    {
+      // Set basic viewport constraints.
       _screenSize = GetViewportRect().Size;
       _startPosition = GlobalPosition;
-      _uiNode = GetNode<Godot.Node2D>("UI");
 
+      // Cache specific nodes.
+      _uiNode = GetNode<Godot.Node2D>("UI");
       _audioNode = GetParent().GetNode<Node>("Audio");
+
+      // Create the animated points pool.
+      _animatedPointsManager = new AnimatedPointsManager(_uiNode, Globals.AnimatedPointPoolSize);
+      //_ = _animatedPointsManager.Start();
 
       // Start game background music.
       var backgroundMusic = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_BackgroundMusic");
       backgroundMusic?.Play();
 
+      // Generate the initial board.
       while (true)
       {
          if (Generate())
@@ -76,6 +80,12 @@ public partial class GameBoard : Node2D
             break;
          }
       }
+
+      AnimatedPoint animatedPoint = new AnimatedPoint();
+      animatedPoint.TopLevel = true;
+      animatedPoint.Name = $"AnimatedPoint1";
+      animatedPoint.Owner = _uiNode;
+      _uiNode.AddChild(animatedPoint);
 
       // The game board is now ready for input.
       _isReady = true;
@@ -87,6 +97,15 @@ public partial class GameBoard : Node2D
    /// <param name="delta"></param>
    public override void _Process(double delta)
    {
+   }
+
+   /// <summary>
+   /// Handle any clean-up when the game board is removed from the scene.
+   /// </summary>
+   public override void _ExitTree()
+   {
+      //_animatedPointsManager.Stop();
+      base._ExitTree();
    }
 
    /// <summary>
@@ -170,13 +189,13 @@ public partial class GameBoard : Node2D
       if (_primarySelection != null)
       {
          var border = _primarySelection.GetNode<AnimatedSprite2D>("Border");
-         border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_default.tres");
+         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
       }
 
       if (_secondarySelection != null)
       {
          var border = _secondarySelection.GetNode<AnimatedSprite2D>("Border");
-         border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_default.tres");
+         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
       }
 
       _primarySelection = null;
@@ -198,14 +217,22 @@ public partial class GameBoard : Node2D
             List<MatchedTileInfo> horizontalmatches = new List<MatchedTileInfo>();
             if (EvaluateTileForMatch(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Horizontal, ref horizontalmatches))
             {
-               matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal));
+               var firstTile = horizontalmatches.FirstOrDefault().TileRef;
+               float slice = horizontalmatches.Count / 2.0f;
+               float midPoint = firstTile.GlobalPosition.X + (slice * TileSize) - (TileSize / 2.0f);
+
+               matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal, new Godot.Vector2(midPoint, firstTile.GlobalPosition.Y)));
             }
 
             // Now evaluate vertical-only
             List<MatchedTileInfo> verticalmatches = new List<MatchedTileInfo>();
             if (EvaluateTileForMatch(row, column, Gem.GemType.UNKNOWN, EvaluationDirection.Vertical, ref verticalmatches))
             {
-               matches.Add(new MatchDetails(verticalmatches, EvaluationDirection.Vertical));
+               var firstTile = horizontalmatches.FirstOrDefault().TileRef;
+               float slice = horizontalmatches.Count / 2.0f;
+               float midPoint = firstTile.GlobalPosition.Y + (slice * TileSize) - (TileSize / 2.0f);
+               
+               matches.Add(new MatchDetails(verticalmatches, EvaluationDirection.Vertical, new Godot.Vector2(firstTile.GlobalPosition.X, midPoint)));
             }
          }
       }
@@ -489,7 +516,7 @@ public partial class GameBoard : Node2D
             {
                // The current gem doesn't match the previous gem, so we can now examine the match list
                // and bail early with the results.
-               if (matches.Count >= MinimumMatchCount)
+               if (matches.Count >= Globals.MinimumMatchCount)
                {
                   return true;
                }
@@ -504,7 +531,7 @@ public partial class GameBoard : Node2D
                // If we have reached the end of the row, see if we have enough horizontal matches.
                if (nextColumn >= TileCount)
                {
-                  if (matches.Count >= MinimumMatchCount)
+                  if (matches.Count >= Globals.MinimumMatchCount)
                   {
                      return true;
                   }
@@ -521,7 +548,7 @@ public partial class GameBoard : Node2D
                // If we have reached the end of the column, see if we have enough vertical matches.
                if (nextRow >= TileCount)
                {
-                  if (matches.Count >= MinimumMatchCount)
+                  if (matches.Count >= Globals.MinimumMatchCount)
                   {
                      return true;
                   }
@@ -534,7 +561,7 @@ public partial class GameBoard : Node2D
          }
       }
 
-      return matches.Count >= MinimumMatchCount;
+      return matches.Count >= Globals.MinimumMatchCount;
    }
 
    /// <summary>
@@ -545,9 +572,11 @@ public partial class GameBoard : Node2D
    {
       foreach (var match in matches)
       {
-         // Update the score.
-         Score = Score + (match.Tiles.Count * level);
-         _uiNode.GetNode<Godot.Label>("ScoreVal").Text = Score.ToString();
+         // Update the score and display points gained animation.
+         var scoreUpdateResults = Score.IncreaseScore(match, level);
+         _animatedPointsManager.Play(match.GlobalPositionAverage, scoreUpdateResults);
+
+         _uiNode.GetNode<Godot.Label>("ScoreVal").Text = scoreUpdateResults.UpdatedScore.ToString();
 
          // Remove the matched tiles from the board.
          foreach (var tile in match.Tiles)
@@ -691,7 +720,7 @@ public partial class GameBoard : Node2D
    /// <exception cref="Exception"></exception>
    private void GenerateTile(int row, int column)
    {
-      var tile = GD.Load<PackedScene>("res://Objects/Grid/Tile.tscn").Instantiate<Tile>();
+      var tile = GD.Load<PackedScene>("res://GameObjectResources/Grid/Tile.tscn").Instantiate<Tile>();
       if (tile == null)
       {
          throw new Exception("Could not instantiate tile.");
@@ -700,7 +729,7 @@ public partial class GameBoard : Node2D
       AddChild(tile);
       tile.MoveTile(row, column, TileSize);
 
-      var gem = GD.Load<PackedScene>("res://Objects/Grid/Gem.tscn").Instantiate<Gem>();
+      var gem = GD.Load<PackedScene>("res://GameObjectResources/Grid/Gem.tscn").Instantiate<Gem>();
       if (gem != null)
       {
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
@@ -717,7 +746,7 @@ public partial class GameBoard : Node2D
    /// </summary>
    /// <param name="sender"></param>
    /// <param name="e"></param>
-   private void Gem_OnGemMouseEvent(object sender, BattleTaterz.Utility.GemMouseEventArgs e)
+   private void Gem_OnGemMouseEvent(object sender, GemMouseEventArgs e)
    {
       if (sender is Gem gem && !_isProcessingTurn)
       {
@@ -726,25 +755,25 @@ public partial class GameBoard : Node2D
          {
             switch (e.EventType)
             {
-               case BattleTaterz.Utility.GemMouseEventArgs.MouseEventType.Enter:
+               case GemMouseEventArgs.MouseEventType.Enter:
                   {
                      if (parentTile != _primarySelection && parentTile != _secondarySelection)
                      {
                         var border = parentTile.GetNode<AnimatedSprite2D>("Border");
-                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_hover.tres");
+                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_hover.tres");
                      }
                   }
                   break;
-               case BattleTaterz.Utility.GemMouseEventArgs.MouseEventType.Leave:
+               case GemMouseEventArgs.MouseEventType.Leave:
                   {
                      if (parentTile != _primarySelection && parentTile != _secondarySelection)
                      {
                         var border = parentTile.GetNode<AnimatedSprite2D>("Border");
-                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_default.tres");
+                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
                      }
                   }
                   break;
-               case BattleTaterz.Utility.GemMouseEventArgs.MouseEventType.Click:
+               case GemMouseEventArgs.MouseEventType.Click:
                   {
                      bool selectionMade = false;
 
@@ -762,7 +791,7 @@ public partial class GameBoard : Node2D
                      if (selectionMade)
                      {
                         var border = parentTile.GetNode<AnimatedSprite2D>("Border");
-                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://Objects/Grid/border_selected.tres");
+                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_selected.tres");
 
                         var selectionSound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_Selection");
                         selectionSound.Play();
@@ -791,6 +820,9 @@ public partial class GameBoard : Node2D
    #endregion
 
    #region Private Members
+
+   // Manager for this game board's animated points pool.
+   private AnimatedPointsManager _animatedPointsManager = null;
 
    // Cache of the UI node so we don't have to look for it every time we need to access a UI element.
    private Node2D _uiNode = null;

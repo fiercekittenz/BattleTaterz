@@ -4,15 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BattleTaterz.Objects.Grid
+namespace BattleTaterz.Core.Enums
 {
-   public enum MoveDirection
+   public enum EvaluationDirection
    {
-      Left,
-      Right,
-      Up,
-      Down,
-
-      NONE
+      Horizontal,
+      Vertical
    };
 }

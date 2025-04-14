@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BattleTaterz.Objects.Grid
+namespace BattleTaterz.Core.Gameplay
 {
    /// <summary>
    /// A stub of information on a tile that has been matched on the board and needs to be removed

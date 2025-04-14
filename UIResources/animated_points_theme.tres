@@ -1,0 +1,13 @@
+[gd_resource type="Theme" load_steps=2 format=3 uid="uid://cjc8gyrwvtcm8"]
+
+[ext_resource type="FontFile" uid="uid://cbwdkgmajnr1m" path="res://Assets/Fonts/Boogaloo-Regular.ttf" id="1_vxu5y"]
+
+[resource]
+default_font = ExtResource("1_vxu5y")
+default_font_size = 24
+/colors/font_color = Color(1, 1, 1, 1)
+Label/colors/font_color = Color(9.62615e-07, 0.987147, 0.496627, 1)
+Label/colors/font_outline_color = Color(7.46027e-07, 0.369633, 0.215952, 1)
+Label/colors/font_shadow_color = Color(0, 0, 0, 0)
+Label/constants/outline_size = 10
+Label/font_sizes/font_size = 72

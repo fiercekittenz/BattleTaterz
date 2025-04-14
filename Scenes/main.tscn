@@ -2,7 +2,7 @@
 
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="1_wouoh"]
 [ext_resource type="Script" uid="uid://c5wl3k6ahnbjm" path="res://Scenes/GameBoard.cs" id="2_kldv4"]
-[ext_resource type="Theme" uid="uid://uy7p5q4ssdwt" path="res://UI/ui_theme.tres" id="3_dbjhx"]
+[ext_resource type="Theme" uid="uid://uy7p5q4ssdwt" path="res://UIResources/ui_theme.tres" id="3_dbjhx"]
 [ext_resource type="AudioStream" uid="uid://bhl3om8fj2s8w" path="res://Assets/Audio/Compress.wav" id="3_xpaan"]
 [ext_resource type="AudioStream" uid="uid://dy7u7mn0yy5o4" path="res://Assets/Audio/Selection.ogg" id="5_kry3j"]
 [ext_resource type="AudioStream" uid="uid://ic81goeg1fv4" path="res://Assets/Audio/BadMove.ogg" id="6_21xkr"]
@@ -65,6 +65,10 @@ offset_right = 369.0
 offset_bottom = 1077.0
 theme = ExtResource("3_dbjhx")
 text = "0"
+
+[node name="AnimatedPointPool" type="Node2D" parent="GameBoard/UI"]
+top_level = true
+visibility_layer = 3
 
 [node name="Audio" type="Node" parent="."]
 
