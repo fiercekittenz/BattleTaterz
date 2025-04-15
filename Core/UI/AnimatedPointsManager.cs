@@ -51,7 +51,8 @@ namespace BattleTaterz.Core.UI
          AnimatedPoint pointNode = null;
          while (pointNode == null)
          {
-            pointNode = _animatedPointPool.Where(p => p.IsAvailable).First();
+            pointNode = _animatedPointPool.Where(p => p.IsAvailable).FirstOrDefault();
+            _ = Task.Delay(TimeSpan.FromMilliseconds(1)); // just so it doesn't choke the CPU
          }
 
          // Display the point node.
