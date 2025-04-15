@@ -17,6 +17,6 @@ namespace BattleTaterz.Core
       /// <summary>
       /// The number of animated points that should be kept ready in the pool.
       /// </summary>
-      public static int AnimatedPointPoolSize = 10;
+      public static int AnimatedPointPoolSize = 20;
    }
 }
