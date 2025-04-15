@@ -5,6 +5,7 @@ using BattleTaterz.Core.UI;
 using BattleTaterz.Core.Utility;
 using Godot;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
@@ -24,12 +25,6 @@ public partial class GameBoard : Node2D
    /// </summary>
    [Export]
    public int TileCount { get; set; } = 9;
-
-   /// <summary>
-   /// Defines the size of an individual tile in the grid.
-   /// </summary>
-   [Export]
-   public int TileSize { get; set; } = 64;
 
    /// <summary>
    /// Defines the size of a gem inside a single tile.
@@ -159,8 +154,8 @@ public partial class GameBoard : Node2D
       }
 
       // Reposition the entire board.
-      float centeredX = (_screenSize.X / 2) - ((TileSize * TileCount) / 2);
-      float centeredY = (_screenSize.Y / 2) - ((TileSize * TileCount) / 2);
+      float centeredX = (_screenSize.X / 2) - ((Globals.TileSize * TileCount) / 2);
+      float centeredY = (_screenSize.Y / 2) - ((Globals.TileSize * TileCount) / 2);
       GlobalPosition = new Vector2(centeredX, centeredY);
 
       // Now show!
@@ -196,8 +191,11 @@ public partial class GameBoard : Node2D
       foreach (var tile in tiles)
       {
          tile.GemRef.OnGemMouseEvent -= Gem_OnGemMouseEvent;
-         RemoveChild(tile);
-         tile.QueueFree();
+         if (!tile.IsQueuedForDeletion())
+         {
+            RemoveChild(tile);
+            tile.QueueFree();
+         }
       }
    }
 
@@ -221,6 +219,8 @@ public partial class GameBoard : Node2D
       _primarySelection = null;
       _secondarySelection = null;
 
+      _isProcessingTurn = false;
+
       DebugLogger.Instance.Log("Selections cleared.");
    }
 
@@ -231,7 +231,7 @@ public partial class GameBoard : Node2D
    {
       DebugLogger.Instance.Log("Checking for matches...");
 
-      List <MatchDetails> matches = new List<MatchDetails>();
+      List<MatchDetails> matches = new List<MatchDetails>();
 
       for (int row = 0; row < TileCount; ++row)
       {
@@ -243,9 +243,9 @@ public partial class GameBoard : Node2D
             {
                var firstTile = horizontalmatches.FirstOrDefault().TileRef;
                float slice = horizontalmatches.Count / 2.0f;
-               float midPoint = firstTile.GlobalPosition.X + (slice * TileSize) - (TileSize / 2.0f);
+               float midPoint = firstTile.GlobalPosition.X + (slice * Globals.TileSize) - (Globals.TileSize / 2.0f);
 
-               matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal, new Godot.Vector2(midPoint, firstTile.GlobalPosition.Y)));               
+               matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal, new Godot.Vector2(midPoint, firstTile.GlobalPosition.Y)));
             }
 
             // Now evaluate vertical-only
@@ -254,8 +254,8 @@ public partial class GameBoard : Node2D
             {
                var firstTile = horizontalmatches.FirstOrDefault().TileRef;
                float slice = horizontalmatches.Count / 2.0f;
-               float midPoint = firstTile.GlobalPosition.Y + (slice * TileSize) - (TileSize / 2.0f);
-               
+               float midPoint = firstTile.GlobalPosition.Y + (slice * Globals.TileSize) - (Globals.TileSize / 2.0f);
+
                matches.Add(new MatchDetails(verticalmatches, EvaluationDirection.Vertical, new Godot.Vector2(firstTile.GlobalPosition.X, midPoint)));
             }
          }
@@ -273,7 +273,7 @@ public partial class GameBoard : Node2D
    {
       DebugLogger.Instance.Log("GetPossibleMoves() begin...");
 
-      List <PotentialMoveInfo> possibleMoves = new List<PotentialMoveInfo>();
+      List<PotentialMoveInfo> possibleMoves = new List<PotentialMoveInfo>();
 
       for (int row = 0; row < TileCount; ++row)
       {
@@ -405,6 +405,34 @@ public partial class GameBoard : Node2D
          else
          {
             break;
+         }
+      }
+   }
+
+   /// <summary>
+   /// Removes the tile move request from the list of requested moves. 
+   /// If all moves are finished and the list is empty, restore processing input
+   /// to the gameboard.
+   /// </summary>
+   /// <param name="tile"></param>
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   public void HandleTileMoveAnimationFinished(Tile tile, int row, int column)
+   {
+      lock (_movingTilesMutex)
+      {
+         TileMoveAnimationRequest request = _movingTiles.Where(t => t.Tile == tile && t.Row == row && t.Column == column).First();
+         if (request != null)
+         {
+            DebugLogger.Instance.Log($"Tile [{row}, {column}] has finished animating. Remove from the list!");
+            _movingTiles.Remove(request);
+         }
+
+         if (_movingTiles.Count == 0 && !_isProcessingTurn)
+         {
+            // No more animated moves being tracked. Turn input back on.
+            DebugLogger.Instance.Log("Re-enabling input!");
+            SetProcessInput(true);
          }
       }
    }
@@ -650,8 +678,11 @@ public partial class GameBoard : Node2D
 
             // Remove the tile node from the scene.
             DebugLogger.Instance.Log($"\tRemoving child from GameBoard node");
-            RemoveChild(tile.TileRef);
-            tile.TileRef.QueueFree();
+            if (!tile.TileRef.IsQueuedForDeletion())
+            {
+               RemoveChild(tile.TileRef);
+               tile.TileRef.QueueFree();
+            }
 
             // Remove the tile from the game board grid.
             DebugLogger.Instance.Log($"\tSetting [{tile.Row}, {tile.Column}] to null");
@@ -700,6 +731,33 @@ public partial class GameBoard : Node2D
    }
 
    /// <summary>
+   /// Requests the tile to move to the specified row, column.
+   /// </summary>
+   /// <param name="tile"></param>
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   /// <param name="isNew"></param>
+   /// <param name="removePostTween"></param>
+   private void RequestTileMove(Tile tile, int row, int column, bool isNew, bool removePostTween)
+   {
+      if (_isReady)
+      {
+         lock (_movingTilesMutex)
+         {
+            if (!_movingTiles.Where(t => t.Tile == tile && t.Row == row && t.Column == column).Any())
+            {
+               _movingTiles.Add(new TileMoveAnimationRequest() { Tile = tile, Row = row, Column = column });
+               tile.MoveTile(this, row, column, isNew, _isReady);
+            }
+         }
+      }
+      else
+      {
+         tile.MoveTile(this, row, column, isNew, false);
+      }
+   }
+
+   /// <summary>
    /// Moves the higher tiles down, stomping the original tile and setting it to null until the only null
    /// tiles left are above compressed tiles.
    /// </summary>
@@ -723,7 +781,8 @@ public partial class GameBoard : Node2D
          {
             // Visually slide this tile down.
             DebugLogger.Instance.Log($"\t\tMove [{aboveRow}, {column}]({(int)higherTile.GemRef.CurrentGem}) down");
-            higherTile.MoveTile(row, column, TileSize);
+            //higherTile.MoveTile(this, row, column, false, _isReady);
+            RequestTileMove(higherTile, row, column, false, _isReady);
             compressed = true;
 
             // Swap the data between grid slots to shift the non-null slot into the null.
@@ -821,7 +880,8 @@ public partial class GameBoard : Node2D
       }
 
       AddChild(tile);
-      tile.MoveTile(row, column, TileSize);
+      RequestTileMove(tile, row, column, true, _isReady);
+      //tile.MoveTile(this,row, column, true, _isReady);
 
       var gem = GD.Load<PackedScene>("res://GameObjectResources/Grid/Gem.tscn").Instantiate<Gem>();
       if (gem != null)
@@ -829,7 +889,7 @@ public partial class GameBoard : Node2D
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
          gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
          gem.OnGemMouseEvent += Gem_OnGemMouseEvent;
-         tile.SetGemReference(gem, row, column, TileSize);
+         tile.SetGemReference(gem, row, column, Globals.TileSize);
       }
 
       _gameBoard[row, column] = tile;
@@ -844,13 +904,13 @@ public partial class GameBoard : Node2D
    /// <param name="e"></param>
    private void Gem_OnGemMouseEvent(object sender, GemMouseEventArgs e)
    {
-      if (_isProcessingTurn)
+      bool isAnimating = false;
+      lock(_movingTilesMutex)
       {
-         // Do not handle mouse input while a turn is processing.
-         return;
+         isAnimating = _movingTiles.Count() > 0;
       }
 
-      if (sender is Gem gem)
+      if (!isAnimating && !_isProcessingTurn && sender is Gem gem)
       {
          Tile parentTile = gem.GetParent<Tile>();
          if (parentTile != null)
@@ -913,20 +973,19 @@ public partial class GameBoard : Node2D
 
                      if (_primarySelection != null && _secondarySelection != null)
                      {
-                        SetProcessInput(false);
+                        // Disable input while the move is playing out.
+                        DebugLogger.Instance.Log("Disabling input...");
                         _isProcessingTurn = true;
-                        {
-                           DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() both selections made. Calling SwapSelectedTiles().");
-                           DebugLogger.Instance.Log("MOVE BEGIN");
-                           DebugLogger.Instance.IndentLevel = 1;
+                        SetProcessInput(false);
 
-                           SwapSelectedTiles(_primarySelection, _secondarySelection);
+                        DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() both selections made. Calling SwapSelectedTiles().");
+                        DebugLogger.Instance.Log("MOVE BEGIN");
+                        DebugLogger.Instance.IndentLevel = 1;
 
-                           DebugLogger.Instance.IndentLevel = 0;
-                           DebugLogger.Instance.LogGameBoard($"MOVE END - Resulting game board:", TileCount, ref _gameBoard);
-                        }
-                        SetProcessInput(true);
-                        _isProcessingTurn = false;
+                        SwapSelectedTiles(_primarySelection, _secondarySelection);
+
+                        DebugLogger.Instance.IndentLevel = 0;
+                        DebugLogger.Instance.LogGameBoard($"MOVE END - Resulting game board:", TileCount, ref _gameBoard);
                      }
                   }
                   break;
@@ -943,6 +1002,12 @@ public partial class GameBoard : Node2D
    #endregion
 
    #region Private Members
+
+   // List of tiles currently being moved. Once they are done animating,
+   // they are removed from the list. If all tiles are removed, that is when
+   // the game board can process input again.
+   private object _movingTilesMutex = new object();
+   private List<TileMoveAnimationRequest> _movingTiles = new List<TileMoveAnimationRequest>();
 
    // Manager for this game board's animated points pool.
    private AnimatedPointsManager _animatedPointsManager = null;
@@ -966,12 +1031,12 @@ public partial class GameBoard : Node2D
    private Tile _primarySelection;
    private Tile _secondarySelection;
 
-   // Boolean flag to denote the game is processing a play and should not handle mouse events.
-   private bool _isProcessingTurn = false;
-
    // Boolean flag to indicate the board is ready for player input.
    // Primarily used to block generation sounds at start-up.
    private bool _isReady = false;
+
+   // Flag indicating if the game is busy working on a turn.
+   private bool _isProcessingTurn = false;
 
    #endregion
 }

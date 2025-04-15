@@ -56,7 +56,7 @@ namespace BattleTaterz.Core.UI
          }
 
          // Display the point node.
-         _ = pointNode.Animate(globalPosition, scoreUpdate);
+         pointNode.Animate(globalPosition, scoreUpdate);
       }
 
       #endregion

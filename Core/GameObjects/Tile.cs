@@ -1,5 +1,11 @@
+using BattleTaterz.Core;
+using BattleTaterz.Core.Enums;
 using Godot;
 using System;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using static Tile;
 
 public partial class Tile : Node2D
 {
@@ -62,18 +68,43 @@ public partial class Tile : Node2D
 
    /// <summary>
    /// Moves the tile to a specific position based on the row and column.
+   /// Provide the GameBoard parent node as a parameter to the method, because
+   /// it is possible for the Tile to be removed from the tree while animating.
    /// </summary>
+   /// <param name="parent"></param>
    /// <param name="row"></param>
    /// <param name="column"></param>
-   /// <param name="tileSize"></param>
-   public void MoveTile(int row, int column, int tileSize)
+   /// <param name="isNew"></param>
+   /// <param name="shouldAnimate"></param>
+   public void MoveTile(GameBoard parent, int row, int column, bool isNew, bool shouldAnimate)
    {
       Row = row;
       Column = column;
+      Godot.Vector2 newPosition = new Godot.Vector2(column * Globals.TileSize, row * Globals.TileSize);
 
-      //TODO - animate this
+      if (shouldAnimate)
+      {
+         if (isNew)
+         {
+            // This is a freshly generated tile. It won't have a position yet, so the
+            // start position needs to be above the column it'll drop from.
+            Position = new Godot.Vector2(column * Globals.TileSize, Globals.TileSize * -1);
+         }
 
-      Position = new Vector2(column * tileSize, row * tileSize);
+         var tween = GetTree().CreateTween();
+         tween.SetParallel(true);
+         tween.TweenProperty(this, "position", newPosition, 0.2f).SetEase(Tween.EaseType.In);
+         tween.Finished += (() =>
+         {
+            // Clean up and let the GameBoard know that this tile is done animating.
+            tween.Kill();
+            parent.HandleTileMoveAnimationFinished(this, row, column);
+         });
+      }
+      else
+      {
+         Position = newPosition;
+      }
    }
 
    #endregion

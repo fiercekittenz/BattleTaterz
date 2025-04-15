@@ -60,7 +60,7 @@ namespace BattleTaterz.Core.UI
       /// </summary>
       /// <param name="globalPosition"></param>
       /// <param name="value"></param>
-      public async Task Animate(Godot.Vector2 globalPosition, ScoreUpdateResults scoreUpdate)
+      public void Animate(Godot.Vector2 globalPosition, ScoreUpdateResults scoreUpdate)
       {
          // Halt availability.
          IsAvailable = false;
