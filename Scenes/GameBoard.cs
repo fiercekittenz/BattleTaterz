@@ -2,10 +2,12 @@ using BattleTaterz.Core;
 using BattleTaterz.Core.Enums;
 using BattleTaterz.Core.Gameplay;
 using BattleTaterz.Core.UI;
+using BattleTaterz.Core.Utility;
 using Godot;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -47,6 +49,11 @@ public partial class GameBoard : Node2D
    /// </summary>
    public Score Score { get; private set; } = new Score();
 
+   /// <summary>
+   /// Denotes if the game should log out data on swaps, matches, and board state.
+   /// </summary>
+   public bool LogDebugInfo { get; set; } = true;
+
    #endregion
 
    #region Public Methods
@@ -56,6 +63,9 @@ public partial class GameBoard : Node2D
    /// </summary>
    public override void _Ready()
    {
+      DebugLogger.Instance.ShouldLog(LogDebugInfo);
+      DebugLogger.Instance.Log("Battle Taterz play session ready.");
+
       // Set basic viewport constraints.
       _screenSize = GetViewportRect().Size;
       _startPosition = GlobalPosition;
@@ -66,20 +76,24 @@ public partial class GameBoard : Node2D
 
       // Create the animated points pool.
       _animatedPointsManager = new AnimatedPointsManager(_uiNode, Globals.AnimatedPointPoolSize);
-      //_ = _animatedPointsManager.Start();
 
       // Start game background music.
       var backgroundMusic = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_BackgroundMusic");
       backgroundMusic?.Play();
 
       // Generate the initial board.
+      // TODO: This is a bit excessive. Now that match detection and collapsing exists, this can be simplified.
+      LogDebugInfo = false;
       while (true)
       {
          if (Generate())
          {
             break;
          }
+
+         _ = Task.Delay(TimeSpan.FromMilliseconds(1)); // just so it doesn't choke the CPU
       }
+      LogDebugInfo = true;
 
       AnimatedPoint animatedPoint = new AnimatedPoint();
       animatedPoint.TopLevel = true;
@@ -109,7 +123,8 @@ public partial class GameBoard : Node2D
    }
 
    /// <summary>
-   /// Generates the entire game board.
+   /// Generates the entire game board. Only performs one generation loop and returns false if matches were found.
+   /// It is the responsibility of the caller to invoke again if this doesn't yield the desired results.
    /// </summary>
    public bool Generate()
    {
@@ -131,12 +146,15 @@ public partial class GameBoard : Node2D
          }
       }
 
+      DebugLogger.Instance.LogGameBoard("Generate() Results", TileCount, ref _gameBoard);
+
       var matches = CheckForMatches();
       if (matches.Any())
       {
          // We cannot use a board that has matches when it is first generated, because
          // it could cause a cascade of point aggregation that isn't attributed to the
          // player's intelligence.
+         DebugLogger.Instance.Log("Generate() resulted in matches. Board needs to be shuffled again.");
          return false;
       }
 
@@ -158,6 +176,7 @@ public partial class GameBoard : Node2D
       }
 
       // The game's afoot!
+      DebugLogger.Instance.Log("Generate() complete.");
       return true;
    }
 
@@ -178,6 +197,7 @@ public partial class GameBoard : Node2D
       {
          tile.GemRef.OnGemMouseEvent -= Gem_OnGemMouseEvent;
          RemoveChild(tile);
+         tile.QueueFree();
       }
    }
 
@@ -200,6 +220,8 @@ public partial class GameBoard : Node2D
 
       _primarySelection = null;
       _secondarySelection = null;
+
+      DebugLogger.Instance.Log("Selections cleared.");
    }
 
    /// <summary>
@@ -207,7 +229,9 @@ public partial class GameBoard : Node2D
    /// </summary>
    public List<MatchDetails> CheckForMatches()
    {
-      List<MatchDetails> matches = new List<MatchDetails>();
+      DebugLogger.Instance.Log("Checking for matches...");
+
+      List <MatchDetails> matches = new List<MatchDetails>();
 
       for (int row = 0; row < TileCount; ++row)
       {
@@ -221,7 +245,7 @@ public partial class GameBoard : Node2D
                float slice = horizontalmatches.Count / 2.0f;
                float midPoint = firstTile.GlobalPosition.X + (slice * TileSize) - (TileSize / 2.0f);
 
-               matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal, new Godot.Vector2(midPoint, firstTile.GlobalPosition.Y)));
+               matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal, new Godot.Vector2(midPoint, firstTile.GlobalPosition.Y)));               
             }
 
             // Now evaluate vertical-only
@@ -237,6 +261,7 @@ public partial class GameBoard : Node2D
          }
       }
 
+      DebugLogger.Instance.Log($"Match search complete. {matches.Count} matches found.");
       return matches;
    }
 
@@ -246,7 +271,9 @@ public partial class GameBoard : Node2D
    /// <returns>List of potential moves that could be played to create a match.</returns>
    public List<PotentialMoveInfo> GetPossibleMoves()
    {
-      List<PotentialMoveInfo> possibleMoves = new List<PotentialMoveInfo>();
+      DebugLogger.Instance.Log("GetPossibleMoves() begin...");
+
+      List <PotentialMoveInfo> possibleMoves = new List<PotentialMoveInfo>();
 
       for (int row = 0; row < TileCount; ++row)
       {
@@ -258,12 +285,13 @@ public partial class GameBoard : Node2D
                MoveDirection possibleDirection = IsPotentialMatch(row, column, currentTile.GemRef.CurrentGem);
                if (possibleDirection != MoveDirection.NONE)
                {
+                  DebugLogger.Instance.Log($"\tPossible move located at [{row}, {column}] (Direction = {(int)possibleDirection}) (Gem = {(int)currentTile.GemRef.CurrentGem})");
                   possibleMoves.Add(new PotentialMoveInfo(currentTile, row, column, possibleDirection));
                }
             }
          }
       }
-
+      DebugLogger.Instance.Log($"GetPossibleMoves() complete. {possibleMoves.Count} possible moves found.");
       return possibleMoves;
    }
 
@@ -274,6 +302,14 @@ public partial class GameBoard : Node2D
    /// <param name="secondary"></param>
    public void SwapSelectedTiles(Tile primary, Tile secondary)
    {
+      if (LogDebugInfo)
+      {
+         // Only check this information if we want to log debug info to avoid the additional cycles.
+         var primaryCoordinates = GetTileCoordinates(primary);
+         var secondaryCoordinates = GetTileCoordinates(secondary);
+         DebugLogger.Instance.Log($"Attempting to swap [{primaryCoordinates.Item1}, {primaryCoordinates.Item2}]({(int)primary.GemRef.CurrentGem}) with [{secondaryCoordinates.Item1}, {secondaryCoordinates.Item2}]({(int)secondary.GemRef.CurrentGem})");
+      }
+
       // Cache the game board coordinates and positions of each before swapping.
       Tuple<int, int> originalPrimaryCoordinates = new Tuple<int, int>(primary.Row, primary.Column);
       Tuple<int, int> originalSecondaryCoordinates = new Tuple<int, int>(secondary.Row, secondary.Column);
@@ -291,6 +327,8 @@ public partial class GameBoard : Node2D
       if (matches.Any())
       {
          // Matches found, so go ahead and swap positions.
+         DebugLogger.Instance.Log("\tSwap approved. Matches found.");
+
          primary.UpdateCoordinates(originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2);
          primary.GlobalPosition = originalSecondaryPosition;
 
@@ -303,6 +341,8 @@ public partial class GameBoard : Node2D
       else
       {
          // No matches. Swap everything back to the original positions and play a womp womp sound.
+         DebugLogger.Instance.Log("\tNo matches would have resulted from this swap.");
+
          _gameBoard[originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2] = primary;
          _gameBoard[originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2] = secondary;
 
@@ -322,6 +362,7 @@ public partial class GameBoard : Node2D
             // No moves are possible with the current board.
             // A new board needs to be generated.
             //TODO - figure out how this should be handled in multiplayer battle scenarios. It isn't the player's fault if this happens.
+            DebugLogger.Instance.Log("\tNo possible moves detected on this game board.");
             var noMoreMovesSound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_NoMoreMoves");
             noMoreMovesSound?.Play();
          }
@@ -337,6 +378,7 @@ public partial class GameBoard : Node2D
    /// </summary>
    public void OnDebugResetButtonPressed()
    {
+      DebugLogger.Instance.Log("Debug reset requested.");
       while (true)
       {
          if (Generate())
@@ -351,6 +393,7 @@ public partial class GameBoard : Node2D
    /// </summary>
    public void OnDebugHandleMatchesButtonPressed()
    {
+      DebugLogger.Instance.Log("Debug handle matches button pressed.");
       bool working = true;
       while (working)
       {
@@ -403,6 +446,8 @@ public partial class GameBoard : Node2D
    /// <returns>The direction in which the tile may be moved to make a match. Returns MoveDirection.NONE if no move is detected.</returns>
    private MoveDirection IsPotentialMatch(int row, int column, Gem.GemType gemType)
    {
+      DebugLogger.Instance.Log($"Evaluate [{row}, {column}]({(int)gemType}) for potential matches...");
+
       //
       // Match 3 Prediction 101:
       //
@@ -425,6 +470,7 @@ public partial class GameBoard : Node2D
              _gameBoard[row, column - 2].GemRef.CurrentGem == gemType &&
              _gameBoard[row, column - 3].GemRef.CurrentGem == gemType)
          {
+            DebugLogger.Instance.Log("\tPossible linear slide match to the left.");
             return MoveDirection.Left;
          }
 
@@ -434,6 +480,7 @@ public partial class GameBoard : Node2D
              _gameBoard[row, column + 2].GemRef.CurrentGem == gemType &&
              _gameBoard[row, column + 3].GemRef.CurrentGem == gemType)
          {
+            DebugLogger.Instance.Log("\tPossible linear slide match to the right.");
             return MoveDirection.Right;
          }
 
@@ -443,6 +490,7 @@ public partial class GameBoard : Node2D
              _gameBoard[row - 2, column].GemRef.CurrentGem == gemType &&
              _gameBoard[row - 3, column].GemRef.CurrentGem == gemType)
          {
+            DebugLogger.Instance.Log("\tPossible linear slide match above.");
             return MoveDirection.Up;
          }
 
@@ -452,6 +500,7 @@ public partial class GameBoard : Node2D
              _gameBoard[row + 2, column].GemRef.CurrentGem == gemType &&
              _gameBoard[row + 3, column].GemRef.CurrentGem == gemType)
          {
+            DebugLogger.Instance.Log("\tPossible linear slide match below.");
             return MoveDirection.Down;
          }
       }
@@ -463,6 +512,7 @@ public partial class GameBoard : Node2D
              _gameBoard[row - 1, column - 1].GemRef.CurrentGem == gemType &&
              _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType)
          {
+            DebugLogger.Instance.Log("\tPossible wedge slide match to the left.");
             return MoveDirection.Left;
          }
 
@@ -471,6 +521,7 @@ public partial class GameBoard : Node2D
              _gameBoard[row - 1, column + 1].GemRef.CurrentGem == gemType &&
              _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
          {
+            DebugLogger.Instance.Log("\tPossible wedge slide match to the right.");
             return MoveDirection.Right;
          }
 
@@ -479,6 +530,7 @@ public partial class GameBoard : Node2D
              _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType &&
              _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
          {
+            DebugLogger.Instance.Log("\tPossible wedge slide match up.");
             return MoveDirection.Up;
          }
 
@@ -487,10 +539,12 @@ public partial class GameBoard : Node2D
              _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType &&
              _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
          {
+            DebugLogger.Instance.Log("\tPossible wedge slide down.");
             return MoveDirection.Down;
          }
       }
 
+      DebugLogger.Instance.Log("\tNo possible moves found.");
       return MoveDirection.NONE;
    }
 
@@ -500,6 +554,8 @@ public partial class GameBoard : Node2D
    /// </summary>
    private bool EvaluateTileForMatch(int row, int column, Gem.GemType previousGem, EvaluationDirection direction, ref List<MatchedTileInfo> matches)
    {
+      DebugLogger.Instance.Log($"EvaluateTileForMatch() [{row}, {column}]({(int)previousGem}) (Direction = {(int)direction})");
+
       if (row >= 0 && row < TileCount && column >= 0 && column < TileCount)
       {
          // Look at the current tile and compare against the previous tile. If the tile is
@@ -561,6 +617,7 @@ public partial class GameBoard : Node2D
          }
       }
 
+      DebugLogger.Instance.Log($"EvaluateTileForMatch() {matches.Count} found.");
       return matches.Count >= Globals.MinimumMatchCount;
    }
 
@@ -574,23 +631,30 @@ public partial class GameBoard : Node2D
       {
          // Update the score and display points gained animation.
          var scoreUpdateResults = Score.IncreaseScore(match, level);
-         _animatedPointsManager.Play(match.GlobalPositionAverage, scoreUpdateResults);
+         DebugLogger.Instance.Log($"HandleMatches() scoreUpdateResults (BasePoints = {scoreUpdateResults.BasePoints}) (Bonus = {scoreUpdateResults.BonusPointsRewarded})");
 
+         _animatedPointsManager.Play(match.GlobalPositionAverage, scoreUpdateResults);
          _uiNode.GetNode<Godot.Label>("ScoreVal").Text = scoreUpdateResults.UpdatedScore.ToString();
 
          // Remove the matched tiles from the board.
          foreach (var tile in match.Tiles)
          {
+            DebugLogger.Instance.Log($"HandleMatches() removing [{tile.Row}, {tile.Column}]({(int)tile.TileRef.GemRef.CurrentGem})...");
+
             // Remove all of the event handlers from the tile and gem before removing from the scene.
             if (tile.TileRef != null && tile.TileRef.GemRef != null)
             {
+               DebugLogger.Instance.Log($"\tRemoving OnGemMouseEvent() handler");
                tile.TileRef.GemRef.OnGemMouseEvent -= Gem_OnGemMouseEvent;
             }
 
             // Remove the tile node from the scene.
+            DebugLogger.Instance.Log($"\tRemoving child from GameBoard node");
             RemoveChild(tile.TileRef);
+            tile.TileRef.QueueFree();
 
             // Remove the tile from the game board grid.
+            DebugLogger.Instance.Log($"\tSetting [{tile.Row}, {tile.Column}] to null");
             _gameBoard[tile.Row, tile.Column] = null;
          }
       }
@@ -643,6 +707,9 @@ public partial class GameBoard : Node2D
    /// <param name="column"></param>
    private void CompressColumn(int row, int column, int startingRow)
    {
+      bool compressed = false;
+      DebugLogger.Instance.Log($"CompressColumn() [{row}, {column}] starting from row {startingRow}");
+
       int aboveRow = row - 1;
       if (aboveRow >= 0)
       {
@@ -650,10 +717,14 @@ public partial class GameBoard : Node2D
 
          // If the tile above is valid, and the current tile is null, start the swap operation to compress.
          Tile higherTile = _gameBoard[aboveRow, column];
+         DebugLogger.Instance.Log($"\tHigher tile coordinates = [{aboveRow}, {column}]");
+
          if (higherTile != null && currentTile == null)
          {
             // Visually slide this tile down.
+            DebugLogger.Instance.Log($"\t\tMove [{aboveRow}, {column}]({(int)higherTile.GemRef.CurrentGem}) down");
             higherTile.MoveTile(row, column, TileSize);
+            compressed = true;
 
             // Swap the data between grid slots to shift the non-null slot into the null.
             _gameBoard[row, column] = _gameBoard[aboveRow, column];
@@ -662,21 +733,26 @@ public partial class GameBoard : Node2D
             int belowRow = row + 1;
             if (belowRow < TileCount && _gameBoard[belowRow, column] == null)
             {
+               DebugLogger.Instance.Log($"\t\tContinue compression from below (= [{belowRow}, {column}]) starting row {startingRow}");
                CompressColumn(belowRow, column, startingRow);
             }
             else
             {
+               DebugLogger.Instance.Log($"\t\tContinue compression from [{row}, {column}] starting row {startingRow}");
                CompressColumn(row, column, startingRow);
             }
          }
          // Else, we need to continue to move up until we have a valid higher tile and a potential null.
          else
          {
+            DebugLogger.Instance.Log($"\t\tContinue compression from above (= [{aboveRow}, {column}]) starting row {startingRow}");
             CompressColumn(aboveRow, column, startingRow);
          }
       }
       else if (_gameBoard[startingRow, column] == null)
       {
+         DebugLogger.Instance.Log($"\tTile [{startingRow}, {column}] is null. Check if compression is complete.");
+
          // If we're still null at the bottom, see if there are any more tiles to compress down.
          // If there are any tiles, start all over again until we've moved everything down.
          bool compressionComplete = true;
@@ -684,15 +760,24 @@ public partial class GameBoard : Node2D
          {
             if (_gameBoard[check, column] != null)
             {
+               DebugLogger.Instance.Log($"\t\tTile at [{check}, {column}]({(int)_gameBoard[check, column].GemRef.CurrentGem}) is not null.");
                compressionComplete = false;
             }
          }
 
          if (!compressionComplete)
          {
+            DebugLogger.Instance.Log($"\tCompression not complete. CompressColumn() again with [{startingRow}, {column}] starting row {startingRow}");
             CompressColumn(startingRow, column, startingRow);
          }
       }
+
+      if (compressed)
+      {
+         DebugLogger.Instance.LogGameBoard($"CompressColumn() ([{row}, {column}] startingRow = {startingRow}) resulting game board:", TileCount, ref _gameBoard);
+      }
+
+      DebugLogger.Instance.Log($"CompressColumn() ([{row}, {column}] startingRow = {startingRow}) returning");
    }
 
    /// <summary>
@@ -700,16 +785,25 @@ public partial class GameBoard : Node2D
    /// </summary>
    private void ReplaceRemovedTiles()
    {
+      DebugLogger.Instance.Log("ReplaceRemovedTiles() begin...");
+
       for (int row = 0; row < TileCount; ++row)
       {
          for (int column = 0; column < TileCount; ++column)
          {
             if (_gameBoard[row, column] == null)
             {
-               GenerateTile(row, column);
+               DebugLogger.Instance.Log($"\tReplacing [{row}, {column}]");
+               var result = GenerateTile(row, column);
+               if (result != null)
+               {
+                  DebugLogger.Instance.Log($"\tNew tile generated at [{row}, {column}] with gem {(int)result.GemRef.CurrentGem}");
+               }
             }
          }
       }
+
+      DebugLogger.Instance.Log("ReplaceRemovedTiles() complete.");
    }
 
    /// <summary>
@@ -718,7 +812,7 @@ public partial class GameBoard : Node2D
    /// <param name="row"></param>
    /// <param name="column"></param>
    /// <exception cref="Exception"></exception>
-   private void GenerateTile(int row, int column)
+   private Tile GenerateTile(int row, int column)
    {
       var tile = GD.Load<PackedScene>("res://GameObjectResources/Grid/Tile.tscn").Instantiate<Tile>();
       if (tile == null)
@@ -739,6 +833,8 @@ public partial class GameBoard : Node2D
       }
 
       _gameBoard[row, column] = tile;
+
+      return tile;
    }
 
    /// <summary>
@@ -748,7 +844,13 @@ public partial class GameBoard : Node2D
    /// <param name="e"></param>
    private void Gem_OnGemMouseEvent(object sender, GemMouseEventArgs e)
    {
-      if (sender is Gem gem && !_isProcessingTurn)
+      if (_isProcessingTurn)
+      {
+         // Do not handle mouse input while a turn is processing.
+         return;
+      }
+
+      if (sender is Gem gem)
       {
          Tile parentTile = gem.GetParent<Tile>();
          if (parentTile != null)
@@ -781,11 +883,23 @@ public partial class GameBoard : Node2D
                      {
                         _primarySelection = parentTile;
                         selectionMade = true;
+
+                        if (LogDebugInfo)
+                        {
+                           var coordinates = GetTileCoordinates(_primarySelection);
+                           DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() first selection [{coordinates.Item1}, {coordinates.Item2}]({(int)_primarySelection.GemRef.CurrentGem})");
+                        }
                      }
                      else if (_secondarySelection == null && parentTile != _secondarySelection)
                      {
                         _secondarySelection = parentTile;
                         selectionMade = true;
+
+                        if (LogDebugInfo)
+                        {
+                           var coordinates = GetTileCoordinates(_secondarySelection);
+                           DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() second selection [{coordinates.Item1}, {coordinates.Item2}]({(int)_secondarySelection.GemRef.CurrentGem})");
+                        }
                      }
 
                      if (selectionMade)
@@ -799,10 +913,19 @@ public partial class GameBoard : Node2D
 
                      if (_primarySelection != null && _secondarySelection != null)
                      {
+                        SetProcessInput(false);
                         _isProcessingTurn = true;
                         {
+                           DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() both selections made. Calling SwapSelectedTiles().");
+                           DebugLogger.Instance.Log("MOVE BEGIN");
+                           DebugLogger.Instance.IndentLevel = 1;
+
                            SwapSelectedTiles(_primarySelection, _secondarySelection);
+
+                           DebugLogger.Instance.IndentLevel = 0;
+                           DebugLogger.Instance.LogGameBoard($"MOVE END - Resulting game board:", TileCount, ref _gameBoard);
                         }
+                        SetProcessInput(true);
                         _isProcessingTurn = false;
                      }
                   }

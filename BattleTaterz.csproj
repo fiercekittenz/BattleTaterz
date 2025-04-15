@@ -4,6 +4,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
   <ItemGroup>
-    <Folder Include="Utility\" />
+    <Compile Remove="Utility\**" />
+    <EmbeddedResource Remove="Utility\**" />
   </ItemGroup>
 </Project>
