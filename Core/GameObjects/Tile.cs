@@ -71,6 +71,8 @@ public partial class Tile : Node2D
       Row = row;
       Column = column;
 
+      //TODO - animate this
+
       Position = new Vector2(column * tileSize, row * tileSize);
    }
 
