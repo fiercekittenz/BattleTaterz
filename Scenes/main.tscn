@@ -21,21 +21,40 @@
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fevyy"]
 bg_color = Color(0.658319, 0.53659, 1, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
 border_color = Color(0.360836, 0.0012693, 0.580251, 1)
 corner_radius_top_left = 5
 corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
+expand_margin_top = 20.0
+expand_margin_bottom = 20.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hibaj"]
-bg_color = Color(1, 0.623865, 0.849402, 1)
+content_margin_left = 1.0
+content_margin_top = 1.0
+content_margin_right = 1.0
+content_margin_bottom = 1.0
+bg_color = Color(1, 0.623529, 0.85098, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_bottom = 2
+border_color = Color(0.360784, 0, 0.580392, 1)
+expand_margin_top = 20.0
+expand_margin_bottom = 20.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pdsj5"]
 bg_color = Color(0.76134, 0.754421, 1, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.360784, 0, 0.580392, 1)
+expand_margin_top = 20.0
+expand_margin_bottom = 20.0
 
 [node name="Main" type="Node2D"]
 
@@ -94,23 +113,13 @@ text = "0"
 top_level = true
 visibility_layer = 3
 
-[node name="MasterVolumeSlider" type="HSlider" parent="GameBoard/UI"]
-top_level = true
-offset_left = 1592.0
-offset_top = 31.0
-offset_right = 1908.0
-offset_bottom = 66.0
-theme = ExtResource("3_dbjhx")
-theme_override_constants/center_grabber = 100
-theme_override_styles/slider = SubResource("StyleBoxFlat_fevyy")
-theme_override_styles/grabber_area = SubResource("StyleBoxFlat_hibaj")
-theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_pdsj5")
-max_value = 1.0
-step = 0.001
-script = ExtResource("4_b3802")
-AudioBusName = "Master"
+[node name="Control" type="Control" parent="GameBoard/UI"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
 
-[node name="MasterSliderLabel" type="Label" parent="GameBoard/UI"]
+[node name="MasterSliderLabel" type="Label" parent="GameBoard/UI/Control"]
 top_level = true
 offset_left = 1589.0
 offset_top = -2.0
@@ -122,6 +131,22 @@ theme_override_constants/outline_size = 6
 theme_override_fonts/font = ExtResource("5_fevyy")
 theme_override_font_sizes/font_size = 36
 text = "Volume"
+
+[node name="MasterVolumeSlider" type="HSlider" parent="GameBoard/UI/Control"]
+top_level = true
+offset_left = 1593.0
+offset_top = 49.0
+offset_right = 1909.0
+offset_bottom = 84.0
+theme = ExtResource("3_dbjhx")
+theme_override_styles/slider = SubResource("StyleBoxFlat_fevyy")
+theme_override_styles/grabber_area = SubResource("StyleBoxFlat_hibaj")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_pdsj5")
+max_value = 1.0
+step = 0.001
+value = 0.5
+script = ExtResource("4_b3802")
+AudioBusName = "Master"
 
 [node name="Audio" type="Node" parent="."]
 
