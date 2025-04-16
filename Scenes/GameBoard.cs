@@ -449,8 +449,8 @@ public partial class GameBoard : Node2D
             _movingTiles.Remove(request);
 
             int dropSoundId = _rngesus.Next(1, 2);
-            var thunkSound = _audioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
-            thunkSound?.Play();
+            var dropSound = _audioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
+            dropSound?.Play();
          }
 
          if (_movingTiles.Count == 0 && !_isProcessingTurn)

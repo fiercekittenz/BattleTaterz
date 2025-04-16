@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://dm6ajosw7mdoa"]
+[gd_scene load_steps=22 format=3 uid="uid://dm6ajosw7mdoa"]
 
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="1_wouoh"]
 [ext_resource type="Script" uid="uid://c5wl3k6ahnbjm" path="res://Scenes/GameBoard.cs" id="2_kldv4"]
@@ -14,7 +14,6 @@
 [ext_resource type="AudioStream" uid="uid://j7v0wy6hu2uf" path="res://Assets/Audio/MatchHypeLevel2.ogg" id="10_6iyac"]
 [ext_resource type="AudioStream" uid="uid://joxuek3ba8xs" path="res://Assets/Audio/MatchHypeLevel3.ogg" id="11_fdnlq"]
 [ext_resource type="AudioStream" uid="uid://dqkaue4sfte77" path="res://Assets/Audio/Background.wav" id="12_6iyac"]
-[ext_resource type="AudioStream" path="res://Assets/Audio/Collapse.ogg" id="13_fdnlq"]
 [ext_resource type="AudioStream" uid="uid://c6u33jkgcesxi" path="res://Assets/Audio/SelectSecondaryGem.mp3" id="14_wsu2k"]
 [ext_resource type="AudioStream" uid="uid://3046vu847x7g" path="res://Assets/Audio/Drop1.mp3" id="15_k12tt"]
 [ext_resource type="AudioStream" uid="uid://djw1cxgth0vv0" path="res://Assets/Audio/Drop2.mp3" id="16_h1bgf"]
@@ -159,10 +158,6 @@ bus = &"sfx"
 [node name="MainAudio_BackgroundMusic" type="AudioStreamPlayer" parent="Audio"]
 stream = ExtResource("12_6iyac")
 bus = &"music"
-
-[node name="Sound_Thunk" type="AudioStreamPlayer" parent="Audio"]
-stream = ExtResource("13_fdnlq")
-bus = &"sfx"
 
 [node name="Sound_SelectSecondary" type="AudioStreamPlayer" parent="Audio"]
 stream = ExtResource("14_wsu2k")
