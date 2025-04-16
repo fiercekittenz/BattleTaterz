@@ -23,7 +23,7 @@ public partial class MasterVolumeSlider : HSlider
       ValueChanged += MasterVolumeSlider_ValueChanged;
 
       // For now, set the default volume to 25%
-      Value = 0.2
+      Value = 0.2f;
    }
 
    #endregion
