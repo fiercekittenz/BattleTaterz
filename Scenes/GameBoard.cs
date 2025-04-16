@@ -69,11 +69,14 @@ public partial class GameBoard : Node2D
       _uiNode = GetNode<Godot.Node2D>("UI");
       _audioNode = GetParent().GetNode<Node>("Audio");
 
+      // Create RNGesus
+      _rngesus = new Random(Guid.NewGuid().GetHashCode());
+
       // Create the animated points pool.
       _animatedPointsManager = new AnimatedPointsManager(_uiNode, Globals.AnimatedPointPoolSize);
 
       // Start game background music.
-      var backgroundMusic = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_BackgroundMusic");
+      var backgroundMusic = _audioNode.GetNode<AudioStreamPlayer>("Music_BackgroundMain");
       backgroundMusic?.Play();
 
       // Generate the initial board.
@@ -196,6 +199,24 @@ public partial class GameBoard : Node2D
             RemoveChild(tile);
             tile.QueueFree();
          }
+      }
+   }
+
+   /// <summary>
+   /// Clears just the tile borders.
+   /// </summary>
+   public void ClearTileBorders()
+   {
+      if (_primarySelection != null)
+      {
+         var border = _primarySelection.GetNode<AnimatedSprite2D>("Border");
+         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
+      }
+
+      if (_secondarySelection != null)
+      {
+         var border = _secondarySelection.GetNode<AnimatedSprite2D>("Border");
+         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
       }
    }
 
@@ -346,7 +367,7 @@ public partial class GameBoard : Node2D
          _gameBoard[originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2] = primary;
          _gameBoard[originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2] = secondary;
 
-         var badMoveSound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_BadMove");
+         var badMoveSound = _audioNode.GetNode<AudioStreamPlayer>("Sound_BadMove");
          badMoveSound?.Play();
       }
 
@@ -426,6 +447,10 @@ public partial class GameBoard : Node2D
          {
             DebugLogger.Instance.Log($"Tile [{row}, {column}] has finished animating. Remove from the list!");
             _movingTiles.Remove(request);
+
+            int dropSoundId = _rngesus.Next(1, 2);
+            var thunkSound = _audioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
+            thunkSound?.Play();
          }
 
          if (_movingTiles.Count == 0 && !_isProcessingTurn)
@@ -938,11 +963,13 @@ public partial class GameBoard : Node2D
                case GemMouseEventArgs.MouseEventType.Click:
                   {
                      bool selectionMade = false;
+                     AudioStreamPlayer selectionSound = null;
 
                      if (_primarySelection == null && parentTile != _primarySelection)
                      {
                         _primarySelection = parentTile;
                         selectionMade = true;
+                        selectionSound = _audioNode.GetNode<AudioStreamPlayer>("Sound_SelectPrimary");
 
                         if (LogDebugInfo)
                         {
@@ -954,6 +981,7 @@ public partial class GameBoard : Node2D
                      {
                         _secondarySelection = parentTile;
                         selectionMade = true;
+                        selectionSound = _audioNode.GetNode<AudioStreamPlayer>("Sound_SelectSecondary");
 
                         if (LogDebugInfo)
                         {
@@ -967,7 +995,6 @@ public partial class GameBoard : Node2D
                         var border = parentTile.GetNode<AnimatedSprite2D>("Border");
                         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_selected.tres");
 
-                        var selectionSound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_Selection");
                         selectionSound.Play();
                      }
 
@@ -977,6 +1004,7 @@ public partial class GameBoard : Node2D
                         DebugLogger.Instance.Log("Disabling input...");
                         _isProcessingTurn = true;
                         SetProcessInput(false);
+                        ClearTileBorders();
 
                         DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() both selections made. Calling SwapSelectedTiles().");
                         DebugLogger.Instance.Log("MOVE BEGIN");
@@ -1030,6 +1058,9 @@ public partial class GameBoard : Node2D
    // Selected tiles for swap consideration.
    private Tile _primarySelection;
    private Tile _secondarySelection;
+
+   // Random number generator.
+   private System.Random _rngesus;
 
    // Boolean flag to indicate the board is ready for player input.
    // Primarily used to block generation sounds at start-up.
