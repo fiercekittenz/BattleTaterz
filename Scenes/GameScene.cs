@@ -22,8 +22,8 @@ public partial class GameScene : Node2D
    /// </summary>
    public override void _Ready()
    {
+      DebugLogger.Instance.Log("GameScene Ready.", LogLevel.Info);
       DebugLogger.Instance.Enabled = LoggingEnabled;
       DebugLogger.Instance.LoggingLevel = LoggingLevel;
-      DebugLogger.Instance.Log("GameScene Ready.", LogLevel.Info);
    }
 }

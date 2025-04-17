@@ -51,8 +51,14 @@ public partial class GameBoard : Node2D
    /// <summary>
    /// Called when the node enters the scene tree for the first time. 
    /// </summary>
-   public override void _Ready()
+   public override async void _Ready()
    {
+      // Wait for the parent to be ready before preparing the game board.
+      //TODO - get rid of this once we're instantiating from the game scene.
+      await ToSignal(Owner, SignalName.Ready);
+
+      DebugLogger.Instance.Log($"GameBoard [TODO player id] has entered the node tree.", LogLevel.Info);
+
       // Set basic viewport constraints.
       _screenSize = GetViewportRect().Size;
       _startPosition = GlobalPosition;
