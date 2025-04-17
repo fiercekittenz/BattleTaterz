@@ -1,4 +1,5 @@
-﻿using Godot;
+﻿using BattleTaterz.Core.Enums;
+using Godot;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -36,26 +37,28 @@ namespace BattleTaterz.Core.Utility
       public int IndentLevel { get; set; } = 0;
 
       /// <summary>
-      /// Toggle method for enabling or disabling logging.
+      /// Is the logging system even enabled?
       /// </summary>
-      /// <param name="value"></param>
-      public void ShouldLog(bool value)
-      {
-         _enabled = value;
-      }
+      public bool Enabled { get; set; } = false;
+
+      /// <summary>
+      /// The logging level that needs to match in order for the log request to be output.
+      /// </summary>
+      public LogLevel LoggingLevel { get; set; } = LogLevel.Info;
 
       /// <summary>
       /// Basic log function. Logs whatever text is provided.
       /// </summary>
       /// <param name="text"></param>
-      public void Log(string text)
+      /// <param name="logLevel"></param>
+      public void Log(string text, LogLevel logLevel)
       {
-         if (_enabled)
+         if (_enabled && LoggingLevel <= logLevel)
          {
             using (StreamWriter stream = new StreamWriter(_logFile, true))
             {
                string indentation = GetIndentPrefix();
-               stream.WriteLine($"[{DateTime.Now.ToString("MM-dd-yyyy H:mm:ss")}] {indentation}{text}");
+               stream.WriteLine($"[{DateTime.Now.ToString("MM-dd-yyyy H:mm:ss")}][{logLevel.ToString()}] {indentation}{text}");
             }
          }
       }
@@ -65,14 +68,15 @@ namespace BattleTaterz.Core.Utility
       /// </summary>
       /// <param name="headline"></param>
       /// <param name="lines"></param>
-      public void LogLines(string headline, List<string> lines)
+      /// <param name="logLevel"></param>
+      public void LogLines(string headline, List<string> lines, LogLevel logLevel)
       {
-         if (_enabled)
+         if (_enabled && LoggingLevel <= logLevel)
          {
             using (StreamWriter stream = new StreamWriter(_logFile, true))
             {
                string indentation = GetIndentPrefix();
-               stream.WriteLine($"[{DateTime.Now.ToString("MM-dd-yyyy H:mm:ss")}] {indentation}{headline}");
+               stream.WriteLine($"[{DateTime.Now.ToString("MM-dd-yyyy H:mm:ss")}][{logLevel.ToString()}] {indentation}{headline}");
                foreach (var line in lines)
                {
                   stream.WriteLine($"{indentation}{line}");
@@ -87,27 +91,31 @@ namespace BattleTaterz.Core.Utility
       /// <param name="headline"></param>
       /// <param name="tileCount"></param>
       /// <param name="gameBoard"></param>
-      public void LogGameBoard(string headline, int tileCount, ref Tile[,] gameBoard)
+      /// <param name="logLevel"></param>
+      public void LogGameBoard(string headline, int tileCount, ref Tile[,] gameBoard, LogLevel logLevel)
       {
-         List<string> rows = new List<string>();
-         for (int row = 0; row < tileCount; ++row)
+         if (_enabled && LoggingLevel <= logLevel)
          {
-            string rowText = string.Empty;
-            for (int column = 0; column < tileCount; ++column)
+            List<string> rows = new List<string>();
+            for (int row = 0; row < tileCount; ++row)
             {
-               string gemValue = "*"; // assume null until proven otherwise
-               if (gameBoard[row, column] != null && gameBoard[row, column].GemRef != null)
+               string rowText = string.Empty;
+               for (int column = 0; column < tileCount; ++column)
                {
-                  gemValue = $"{(int)gameBoard[row, column].GemRef.CurrentGem}";
+                  string gemValue = "*"; // assume null until proven otherwise
+                  if (gameBoard[row, column] != null && gameBoard[row, column].GemRef != null)
+                  {
+                     gemValue = $"{(int)gameBoard[row, column].GemRef.CurrentGem}";
+                  }
+
+                  rowText = $"{rowText} {gemValue}";
                }
 
-               rowText = $"{rowText} {gemValue}";
+               rows.Add(rowText);
             }
 
-            rows.Add(rowText);
+            LogLines(headline, rows, logLevel);
          }
-
-         LogLines(headline, rows);
       }
 
       #endregion
