@@ -23,5 +23,11 @@ namespace BattleTaterz.Core
       /// The size, in pixels, of the tiles on the board.
       /// </summary>
       public static int TileSize = 64;
+
+      /// <summary>
+      /// The maximum number of hype levels for multiple cascading matches. There can be many more than this, but 
+      /// this value restricts the number of sounds played.
+      /// </summary>
+      public static int MaxHypeLevel { get; set; } = 3;
    }
 }

@@ -33,13 +33,6 @@ public partial class GameBoard : Node2D
    public int GemSize { get; set; } = 32;
 
    /// <summary>
-   /// The maximum number of hype levels for multiple cascading matches. There can be many more than this, but 
-   /// this value restricts the number of sounds played.
-   /// </summary>
-   [Export]
-   public int MaxHypeLevel { get; set; } = 3;
-
-   /// <summary>
    /// The current score.
    /// </summary>
    public Score Score { get; private set; } = new Score();
@@ -695,7 +688,7 @@ public partial class GameBoard : Node2D
       var newMatches = CheckForMatches();
       if (newMatches.Any())
       {
-         if (level >= MaxHypeLevel)
+         if (level >= Globals.MaxHypeLevel)
          {
             // Reset the level so the sounds will pitch up again.
             level = 0;
