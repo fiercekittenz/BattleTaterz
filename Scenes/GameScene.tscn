@@ -1,8 +1,7 @@
-[gd_scene load_steps=23 format=3 uid="uid://dwq1urk6jpoqr"]
+[gd_scene load_steps=22 format=3 uid="uid://dwq1urk6jpoqr"]
 
 [ext_resource type="Script" uid="uid://bb68lhat8iyfp" path="res://Scenes/GameScene.cs" id="1_gipt1"]
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
-[ext_resource type="Script" uid="uid://c5wl3k6ahnbjm" path="res://Scenes/GameBoard.cs" id="3_v7xhk"]
 [ext_resource type="Theme" uid="uid://uy7p5q4ssdwt" path="res://UIResources/ui_theme.tres" id="4_wukv0"]
 [ext_resource type="FontFile" uid="uid://cbwdkgmajnr1m" path="res://Assets/Fonts/Boogaloo-Regular.ttf" id="5_hgvmy"]
 [ext_resource type="Script" uid="uid://crw08tcl2sd8q" path="res://Scenes/MasterVolumeSlider.cs" id="6_ebcm8"]
@@ -190,10 +189,3 @@ step = 0.001
 value = 0.5
 script = ExtResource("6_ebcm8")
 AudioBusName = "Master"
-
-[node name="GameBoard" type="Node2D" parent="."]
-script = ExtResource("3_v7xhk")
-
-[node name="AnimatedPointPool" type="Node2D" parent="GameBoard"]
-top_level = true
-visibility_layer = 3

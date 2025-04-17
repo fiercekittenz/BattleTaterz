@@ -1,5 +1,6 @@
 using BattleTaterz.Core;
 using BattleTaterz.Core.Enums;
+using BattleTaterz.Core.GameObjects;
 using BattleTaterz.Core.Gameplay;
 using BattleTaterz.Core.UI;
 using BattleTaterz.Core.Utility;
@@ -21,21 +22,14 @@ public partial class GameBoard : Node2D
    #region Public Properties
 
    /// <summary>
-   /// Represents the number of tiles in rows and columns for the game board.
-   /// </summary>
-   [Export]
-   public int TileCount { get; set; } = 9;
-
-   /// <summary>
-   /// Defines the size of a gem inside a single tile.
-   /// </summary>
-   [Export]
-   public int GemSize { get; set; } = 32;
-
-   /// <summary>
    /// The current score.
    /// </summary>
    public Score Score { get; private set; } = new Score();
+
+   /// <summary>
+   /// The id of the player that owns this board.
+   /// </summary>
+   public PlayerInfo Player { get; set; }
 
    #endregion
 
@@ -44,17 +38,9 @@ public partial class GameBoard : Node2D
    /// <summary>
    /// Called when the node enters the scene tree for the first time. 
    /// </summary>
-   public override async void _Ready()
+   public override void _Ready()
    {
-      // Wait for the parent to be ready before preparing the game board.
-      //TODO - get rid of this once we're instantiating from the game scene.
-      await ToSignal(Owner, SignalName.Ready);
-
       DebugLogger.Instance.Log($"GameBoard [TODO player id] has entered the node tree.", LogLevel.Info);
-
-      // Set basic viewport constraints.
-      _screenSize = GetViewportRect().Size;
-      _startPosition = GlobalPosition;
 
       // Cache specific nodes.
       _gameScene = GetParent<GameScene>();
@@ -108,12 +94,12 @@ public partial class GameBoard : Node2D
       Clear();
 
       // Reinstantiate the game board grid with the tile count as it may have been changed.
-      _gameBoard = new Tile[TileCount, TileCount];
+      _gameBoard = new Tile[Globals.TileCount, Globals.TileCount];
 
       // Iterate and create rows, columns, and the gems for each tile.
-      for (int row = 0; row < TileCount; ++row)
+      for (int row = 0; row < Globals.TileCount; ++row)
       {
-         for (int column = 0; column < TileCount; ++column)
+         for (int column = 0; column < Globals.TileCount; ++column)
          {
             GenerateTile(row, column);
          }
@@ -132,11 +118,6 @@ public partial class GameBoard : Node2D
             Generate();
          }
       }
-
-      // Reposition the entire board.
-      float centeredX = (_screenSize.X / 2) - ((Globals.TileSize * TileCount) / 2);
-      float centeredY = (_screenSize.Y / 2) - ((Globals.TileSize * TileCount) / 2);
-      GlobalPosition = new Vector2(centeredX, centeredY);
 
       // Now show!
       Show();
@@ -162,9 +143,6 @@ public partial class GameBoard : Node2D
       // Reset any selections prior to clearing the board.
       _primarySelection = null;
       _secondarySelection = null;
-
-      // Persist the position.
-      GlobalPosition = _startPosition;
 
       var tiles = GetChildren().OfType<Tile>().ToList();
       foreach (var tile in tiles)
@@ -230,9 +208,9 @@ public partial class GameBoard : Node2D
 
       List<MatchDetails> matches = new List<MatchDetails>();
 
-      for (int row = 0; row < TileCount; ++row)
+      for (int row = 0; row < Globals.TileCount; ++row)
       {
-         for (int column = 0; column < TileCount; ++column)
+         for (int column = 0; column < Globals.TileCount; ++column)
          {
             // Evaluate horizontal-only
             List<MatchedTileInfo> horizontalmatches = new List<MatchedTileInfo>();
@@ -272,9 +250,9 @@ public partial class GameBoard : Node2D
 
       List<PotentialMoveInfo> possibleMoves = new List<PotentialMoveInfo>();
 
-      for (int row = 0; row < TileCount; ++row)
+      for (int row = 0; row < Globals.TileCount; ++row)
       {
-         for (int column = 0; column < TileCount; ++column)
+         for (int column = 0; column < Globals.TileCount; ++column)
          {
             Tile currentTile = _gameBoard[row, column];
             if (currentTile != null)
@@ -409,9 +387,9 @@ public partial class GameBoard : Node2D
    /// <returns>A list of tuples representing the coordinates of the tiles in the provided list.</returns>
    private Tuple<int, int> GetTileCoordinates(Tile tileToLocate)
    {
-      for (int row = 0; row < TileCount; ++row)
+      for (int row = 0; row < Globals.TileCount; ++row)
       {
-         for (int column = 0; column < TileCount; ++column)
+         for (int column = 0; column < Globals.TileCount; ++column)
          {
             if (_gameBoard[row, column] == tileToLocate)
             {
@@ -464,7 +442,7 @@ public partial class GameBoard : Node2D
          }
 
          // Look right.
-         if (column <= TileCount - 4 &&
+         if (column <= Globals.TileCount - 4 &&
              _gameBoard[row, column + 1].GemRef.CurrentGem != gemType &&
              _gameBoard[row, column + 2].GemRef.CurrentGem == gemType &&
              _gameBoard[row, column + 3].GemRef.CurrentGem == gemType)
@@ -484,7 +462,7 @@ public partial class GameBoard : Node2D
          }
 
          // Look down.
-         if (row <= TileCount - 4 &&
+         if (row <= Globals.TileCount - 4 &&
              _gameBoard[row + 1, column].GemRef.CurrentGem != gemType &&
              _gameBoard[row + 2, column].GemRef.CurrentGem == gemType &&
              _gameBoard[row + 3, column].GemRef.CurrentGem == gemType)
@@ -497,7 +475,7 @@ public partial class GameBoard : Node2D
       // Potential Move Type: Wedge Slide (x o x -> move another x in from above or below the middle tile)
       {
          // Look left.
-         if (column >= 1 && column < TileCount && row >= 1 && row < TileCount - 1 &&
+         if (column >= 1 && column < Globals.TileCount && row >= 1 && row < Globals.TileCount - 1 &&
              _gameBoard[row - 1, column - 1].GemRef.CurrentGem == gemType &&
              _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType)
          {
@@ -506,7 +484,7 @@ public partial class GameBoard : Node2D
          }
 
          // Look right.
-         if (column >= 0 && column < TileCount - 1 && row >= 1 && row < TileCount - 1 &&
+         if (column >= 0 && column < Globals.TileCount - 1 && row >= 1 && row < Globals.TileCount - 1 &&
              _gameBoard[row - 1, column + 1].GemRef.CurrentGem == gemType &&
              _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
          {
@@ -515,7 +493,7 @@ public partial class GameBoard : Node2D
          }
 
          // Look up.
-         if (column >= 1 && column < TileCount - 1 && row >= 1 && row < TileCount - 1 &&
+         if (column >= 1 && column < Globals.TileCount - 1 && row >= 1 && row < Globals.TileCount - 1 &&
              _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType &&
              _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
          {
@@ -524,7 +502,7 @@ public partial class GameBoard : Node2D
          }
 
          // Look down.
-         if (column >= 1 && column < TileCount - 1 && row >= 0 && row < TileCount - 1 &&
+         if (column >= 1 && column < Globals.TileCount - 1 && row >= 0 && row < Globals.TileCount - 1 &&
              _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType &&
              _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
          {
@@ -545,7 +523,7 @@ public partial class GameBoard : Node2D
    {
       DebugLogger.Instance.Log($"EvaluateTileForMatch() [{row}, {column}]({(int)previousGem}) (Direction = {(int)direction})", LogLevel.Trace);
 
-      if (row >= 0 && row < TileCount && column >= 0 && column < TileCount)
+      if (row >= 0 && row < Globals.TileCount && column >= 0 && column < Globals.TileCount)
       {
          // Look at the current tile and compare against the previous tile. If the tile is
          // of type "unknown" then add it to the matches list, because that is the starting gem for this check.
@@ -574,7 +552,7 @@ public partial class GameBoard : Node2D
                int nextColumn = column + 1;
 
                // If we have reached the end of the row, see if we have enough horizontal matches.
-               if (nextColumn >= TileCount)
+               if (nextColumn >= Globals.TileCount)
                {
                   if (matches.Count >= Globals.MinimumMatchCount)
                   {
@@ -591,7 +569,7 @@ public partial class GameBoard : Node2D
                int nextRow = row + 1;
 
                // If we have reached the end of the column, see if we have enough vertical matches.
-               if (nextRow >= TileCount)
+               if (nextRow >= Globals.TileCount)
                {
                   if (matches.Count >= Globals.MinimumMatchCount)
                   {
@@ -655,13 +633,13 @@ public partial class GameBoard : Node2D
       }
 
       // Collapse the board such that null tiles are only above valid tiles.
-      for (int column = 0; column < TileCount; ++column)
+      for (int column = 0; column < Globals.TileCount; ++column)
       {
          // Move up the column starting from the bottom row to
          // find the first null entry in the grid. Once it has been
          // identified, that will be the starting point for the collapse of
          // the column.
-         for (int row = (TileCount - 1); row > 0; --row)
+         for (int row = (Globals.TileCount - 1); row > 0; --row)
          {
             if (_gameBoard[row, column] == null)
             {
@@ -756,7 +734,7 @@ public partial class GameBoard : Node2D
             _gameBoard[aboveRow, column] = null;
 
             int belowRow = row + 1;
-            if (belowRow < TileCount && _gameBoard[belowRow, column] == null)
+            if (belowRow < Globals.TileCount && _gameBoard[belowRow, column] == null)
             {
                DebugLogger.Instance.Log($"\t\tContinue compression from below (= [{belowRow}, {column}]) starting row {startingRow}", LogLevel.Trace);
                CompressColumn(belowRow, column, startingRow);
@@ -799,7 +777,7 @@ public partial class GameBoard : Node2D
 
       if (compressed)
       {
-         DebugLogger.Instance.LogGameBoard($"CompressColumn() ([{row}, {column}] startingRow = {startingRow}) resulting game board:", TileCount, ref _gameBoard, LogLevel.Trace);
+         DebugLogger.Instance.LogGameBoard($"CompressColumn() ([{row}, {column}] startingRow = {startingRow}) resulting game board:", Globals.TileCount, ref _gameBoard, LogLevel.Trace);
       }
 
       DebugLogger.Instance.Log($"CompressColumn() ([{row}, {column}] startingRow = {startingRow}) returning", LogLevel.Trace);
@@ -812,9 +790,9 @@ public partial class GameBoard : Node2D
    {
       DebugLogger.Instance.Log("ReplaceRemovedTiles() begin...", LogLevel.Info);
 
-      for (int row = 0; row < TileCount; ++row)
+      for (int row = 0; row < Globals.TileCount; ++row)
       {
-         for (int column = 0; column < TileCount; ++column)
+         for (int column = 0; column < Globals.TileCount; ++column)
          {
             if (_gameBoard[row, column] == null)
             {
@@ -954,7 +932,7 @@ public partial class GameBoard : Node2D
                         SwapSelectedTiles(_primarySelection, _secondarySelection);
 
                         DebugLogger.Instance.IndentLevel = 0;
-                        DebugLogger.Instance.LogGameBoard($"MOVE END - Resulting game board:", TileCount, ref _gameBoard, LogLevel.Info);
+                        DebugLogger.Instance.LogGameBoard($"MOVE END - Resulting game board:", Globals.TileCount, ref _gameBoard, LogLevel.Info);
                      }
                   }
                   break;
@@ -983,12 +961,6 @@ public partial class GameBoard : Node2D
 
    // Cache a ref to the parent game scene.
    private GameScene _gameScene = null;
-
-   // Cache of the starting position for the board's top-leftmost corner.
-   private Vector2 _startPosition = new Vector2(0, 0);
-
-   // Cache of the screen size used in calculating board placement.
-   private Vector2 _screenSize = new Vector2(0, 0);
 
    // Grid layout representation of the game board.
    private Tile[,] _gameBoard;
