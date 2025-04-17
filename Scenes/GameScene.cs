@@ -18,6 +18,22 @@ public partial class GameScene : Node2D
    public LogLevel LoggingLevel { get; set; } = LogLevel.Info;
 
    /// <summary>
+   /// Accessor: UI node
+   /// </summary>
+   public Node2D UINode
+   {
+      get { return _uiNode; }
+   }
+
+   /// <summary>
+   /// Accessor: Audio node
+   /// </summary>
+   public Node2D AudioNode
+   {
+      get { return _audioNode; }
+   }
+
+   /// <summary>
    /// Handles when the game scene enters the node tree.
    /// </summary>
    public override void _Ready()
@@ -25,5 +41,18 @@ public partial class GameScene : Node2D
       DebugLogger.Instance.Log("GameScene Ready.", LogLevel.Info);
       DebugLogger.Instance.Enabled = LoggingEnabled;
       DebugLogger.Instance.LoggingLevel = LoggingLevel;
+
+      _uiNode = GetNode<Node2D>("UI");
+      _audioNode = GetNode<Node2D>("Audio");
    }
+
+   #region Private Members
+
+   // Cache of the UI node so we don't have to look for it every time we need to access a UI element.
+   private Node2D _uiNode = null;
+
+   // Local ref to the audio node.
+   private Node2D _audioNode = null;
+
+   #endregion
 }

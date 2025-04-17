@@ -57,18 +57,16 @@ public partial class GameBoard : Node2D
       _startPosition = GlobalPosition;
 
       // Cache specific nodes.
-      _parentGameScene = GetParent();
-      _uiNode = GetNode<Godot.Node2D>("UI");
-      _audioNode = GetParent().GetNode<Node>("Audio");
+      _gameScene = GetParent<GameScene>();
 
       // Create RNGesus
       _rngesus = new Random(Guid.NewGuid().GetHashCode());
 
       // Create the animated points pool.
-      _animatedPointsManager = new AnimatedPointsManager(_uiNode, Globals.AnimatedPointPoolSize);
+      _animatedPointsManager = new AnimatedPointsManager(_gameScene.UINode, Globals.AnimatedPointPoolSize);
 
       // Start game background music.
-      var backgroundMusic = _audioNode.GetNode<AudioStreamPlayer>("Music_BackgroundMain");
+      var backgroundMusic = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Music_BackgroundMain");
       backgroundMusic?.Play();
 
       // Generate the initial board.
@@ -148,7 +146,7 @@ public partial class GameBoard : Node2D
       // due to no valid moves.
       if (_isReady)
       {
-         var boardReadySound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_GameBoardReady");
+         var boardReadySound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("MainAudio_GameBoardReady");
          boardReadySound?.Play();
       }
 
@@ -345,7 +343,7 @@ public partial class GameBoard : Node2D
          _gameBoard[originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2] = primary;
          _gameBoard[originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2] = secondary;
 
-         var badMoveSound = _audioNode.GetNode<AudioStreamPlayer>("Sound_BadMove");
+         var badMoveSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Sound_BadMove");
          badMoveSound?.Play();
       }
 
@@ -362,7 +360,7 @@ public partial class GameBoard : Node2D
             // A new board needs to be generated.
             //TODO - figure out how this should be handled in multiplayer battle scenarios. It isn't the player's fault if this happens.
             DebugLogger.Instance.Log("\tNo possible moves detected on this game board.", LogLevel.Info);
-            var noMoreMovesSound = _audioNode.GetNode<AudioStreamPlayer>("MainAudio_NoMoreMoves");
+            var noMoreMovesSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("MainAudio_NoMoreMoves");
             noMoreMovesSound?.Play();
          }
       }
@@ -387,7 +385,7 @@ public partial class GameBoard : Node2D
             _movingTiles.Remove(request);
 
             int dropSoundId = _rngesus.Next(1, 2);
-            var dropSound = _audioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
+            var dropSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
             dropSound?.Play();
          }
 
@@ -627,7 +625,7 @@ public partial class GameBoard : Node2D
             DebugLogger.Instance.Log($"HandleMatches() scoreUpdateResults (BasePoints = {scoreUpdateResults.BasePoints}) (Bonus = {scoreUpdateResults.BonusPointsRewarded})", LogLevel.Info);
 
             _animatedPointsManager.Play(match.GlobalPositionAverage, scoreUpdateResults);
-            _uiNode.GetNode<Godot.Label>("ScoreVal").Text = scoreUpdateResults.UpdatedScore.ToString();
+            _gameScene.UINode.GetNode<Godot.Label>("ScoreVal").Text = scoreUpdateResults.UpdatedScore.ToString();
          }
 
          // Remove the matched tiles from the board.
@@ -680,7 +678,7 @@ public partial class GameBoard : Node2D
       if (_isReady)
       {
          string soundName = $"Sound_MatchHypeLevel{level}";
-         var soundToPlay = _audioNode.GetNode<AudioStreamPlayer>(soundName);
+         var soundToPlay = _gameScene.AudioNode.GetNode<AudioStreamPlayer>(soundName);
          soundToPlay?.Play();
       }
 
@@ -912,7 +910,7 @@ public partial class GameBoard : Node2D
                      {
                         _primarySelection = parentTile;
                         selectionMade = true;
-                        selectionSound = _audioNode.GetNode<AudioStreamPlayer>("Sound_SelectPrimary");
+                        selectionSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Sound_SelectPrimary");
 
                         if (DebugLogger.Instance.Enabled)
                         {
@@ -924,7 +922,7 @@ public partial class GameBoard : Node2D
                      {
                         _secondarySelection = parentTile;
                         selectionMade = true;
-                        selectionSound = _audioNode.GetNode<AudioStreamPlayer>("Sound_SelectSecondary");
+                        selectionSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Sound_SelectSecondary");
 
                         if (DebugLogger.Instance.Enabled)
                         {
@@ -984,10 +982,7 @@ public partial class GameBoard : Node2D
    private AnimatedPointsManager _animatedPointsManager = null;
 
    // Cache a ref to the parent game scene.
-   private Node _parentGameScene = null;
-
-   // Cache of the UI node so we don't have to look for it every time we need to access a UI element.
-   private Node2D _uiNode = null;
+   private GameScene _gameScene = null;
 
    // Cache of the starting position for the board's top-leftmost corner.
    private Vector2 _startPosition = new Vector2(0, 0);
@@ -997,9 +992,6 @@ public partial class GameBoard : Node2D
 
    // Grid layout representation of the game board.
    private Tile[,] _gameBoard;
-
-   // Local ref to the audio node.
-   private Node _audioNode;
 
    // Selected tiles for swap consideration.
    private Tile _primarySelection;

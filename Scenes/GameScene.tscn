@@ -67,71 +67,6 @@ metadata/_edit_lock_ = true
 position = Vector2(960, 540)
 sprite_frames = ExtResource("2_pgw7i")
 
-[node name="GameBoard" type="Node2D" parent="."]
-script = ExtResource("3_v7xhk")
-
-[node name="UI" type="Node2D" parent="GameBoard"]
-
-[node name="ScoreLbl" type="Label" parent="GameBoard/UI"]
-top_level = true
-offset_left = 4.0
-offset_top = 1013.0
-offset_right = 169.0
-offset_bottom = 1077.0
-theme = ExtResource("4_wukv0")
-text = "Score:"
-
-[node name="ScoreVal" type="Label" parent="GameBoard/UI"]
-top_level = true
-custom_minimum_size = Vector2(200, 0)
-offset_left = 169.0
-offset_top = 1013.0
-offset_right = 369.0
-offset_bottom = 1077.0
-theme = ExtResource("4_wukv0")
-text = "0"
-
-[node name="AnimatedPointPool" type="Node2D" parent="GameBoard/UI"]
-top_level = true
-visibility_layer = 3
-
-[node name="Control" type="Control" parent="GameBoard/UI"]
-layout_mode = 3
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="MasterSliderLabel" type="Label" parent="GameBoard/UI/Control"]
-top_level = true
-layout_mode = 0
-offset_left = 1589.0
-offset_top = -2.0
-offset_right = 1717.0
-offset_bottom = 41.0
-theme = ExtResource("4_wukv0")
-theme_override_colors/font_outline_color = Color(0.301961, 0, 0.486275, 1)
-theme_override_constants/outline_size = 6
-theme_override_fonts/font = ExtResource("5_hgvmy")
-theme_override_font_sizes/font_size = 36
-text = "Volume"
-
-[node name="MasterVolumeSlider" type="HSlider" parent="GameBoard/UI/Control"]
-top_level = true
-layout_mode = 0
-offset_left = 1593.0
-offset_top = 49.0
-offset_right = 1909.0
-offset_bottom = 84.0
-theme = ExtResource("4_wukv0")
-theme_override_styles/slider = SubResource("StyleBoxFlat_fevyy")
-theme_override_styles/grabber_area = SubResource("StyleBoxFlat_hibaj")
-theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_pdsj5")
-max_value = 1.0
-step = 0.001
-value = 0.5
-script = ExtResource("6_ebcm8")
-AudioBusName = "Master"
-
 [node name="Audio" type="Node2D" parent="."]
 
 [node name="Sound_Compress" type="AudioStreamPlayer" parent="Audio"]
@@ -197,3 +132,68 @@ stream = ExtResource("19_bl770")
 volume_db = -30.0
 bus = &"music"
 parameters/looping = true
+
+[node name="UI" type="Node2D" parent="."]
+
+[node name="ScoreLbl" type="Label" parent="UI"]
+top_level = true
+offset_left = 4.0
+offset_top = 1013.0
+offset_right = 169.0
+offset_bottom = 1077.0
+theme = ExtResource("4_wukv0")
+text = "Score:"
+
+[node name="ScoreVal" type="Label" parent="UI"]
+top_level = true
+custom_minimum_size = Vector2(200, 0)
+offset_left = 169.0
+offset_top = 1013.0
+offset_right = 369.0
+offset_bottom = 1077.0
+theme = ExtResource("4_wukv0")
+text = "0"
+
+[node name="Control" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="MasterSliderLabel" type="Label" parent="UI/Control"]
+top_level = true
+layout_mode = 0
+offset_left = 1589.0
+offset_top = -2.0
+offset_right = 1717.0
+offset_bottom = 41.0
+theme = ExtResource("4_wukv0")
+theme_override_colors/font_outline_color = Color(0.301961, 0, 0.486275, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("5_hgvmy")
+theme_override_font_sizes/font_size = 36
+text = "Volume"
+
+[node name="MasterVolumeSlider" type="HSlider" parent="UI/Control"]
+top_level = true
+layout_mode = 0
+offset_left = 1593.0
+offset_top = 49.0
+offset_right = 1909.0
+offset_bottom = 84.0
+theme = ExtResource("4_wukv0")
+theme_override_styles/slider = SubResource("StyleBoxFlat_fevyy")
+theme_override_styles/grabber_area = SubResource("StyleBoxFlat_hibaj")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_pdsj5")
+max_value = 1.0
+step = 0.001
+value = 0.5
+script = ExtResource("6_ebcm8")
+AudioBusName = "Master"
+
+[node name="GameBoard" type="Node2D" parent="."]
+script = ExtResource("3_v7xhk")
+
+[node name="AnimatedPointPool" type="Node2D" parent="GameBoard"]
+top_level = true
+visibility_layer = 3
