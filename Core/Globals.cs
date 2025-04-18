@@ -27,10 +27,11 @@ namespace BattleTaterz.Core
       /// <summary>
       /// Represents the number of tiles in rows and columns for the game board.
       /// </summary>
-      public static int TileCount { get; set; } = 9;
+      public static int TileCount = 9;
 
       /// <summary>
       /// Defines the size of a gem inside a single tile.
+      /// Might want to allow the game to be "zoomed" so allow this value to be mutated.
       /// </summary>
       public static int GemSize { get; set; } = 32;
 
@@ -38,6 +39,6 @@ namespace BattleTaterz.Core
       /// The maximum number of hype levels for multiple cascading matches. There can be many more than this, but 
       /// this value restricts the number of sounds played.
       /// </summary>
-      public static int MaxHypeLevel { get; set; } = 3;
+      public static int MaxHypeLevel = 3;
    }
 }

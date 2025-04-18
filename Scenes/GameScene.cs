@@ -81,14 +81,14 @@ public partial class GameScene : Node2D
    // Map of active game boards indexed by player information.
    private Dictionary<PlayerInfo, GameBoard> _activeBoards = new Dictionary<PlayerInfo, GameBoard>();
 
+   // Pre-loaded game board scene data for quicker instantiation.
+   private PackedScene _gameBoardScene = null;
+
    // Cache of the UI node so we don't have to look for it every time we need to access a UI element.
    private Node2D _uiNode = null;
 
    // Local ref to the audio node.
    private Node2D _audioNode = null;
-
-   // Pre-loaded game board scene data for quicker instantiation.
-   private PackedScene _gameBoardScene = null;
 
    #endregion
 }

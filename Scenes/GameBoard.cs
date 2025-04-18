@@ -11,8 +11,10 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 /// <summary>
 /// Object representing an individual game board. There may be multiple game boards present at any given time (e.g. Multiplayer).
@@ -44,12 +46,14 @@ public partial class GameBoard : Node2D
 
       // Cache specific nodes.
       _gameScene = GetParent<GameScene>();
+      _uiNode = GetNode<Node2D>("UI");
+      _moveTimerLabel = _uiNode.GetNode<MoveTimerLabel>("MoveTimerLabel");
 
       // Create RNGesus
       _rngesus = new Random(Guid.NewGuid().GetHashCode());
 
       // Create the animated points pool.
-      _animatedPointsManager = new AnimatedPointsManager(_gameScene.UINode, Globals.AnimatedPointPoolSize);
+      _animatedPointsManager = new AnimatedPointsManager(GetNode<Node2D>("AnimatedPointPool"), Globals.AnimatedPointPoolSize);
 
       // Start game background music.
       var backgroundMusic = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Music_BackgroundMain");
@@ -59,6 +63,10 @@ public partial class GameBoard : Node2D
       DebugLogger.Instance.Enabled = false;
       Generate();
       DebugLogger.Instance.Enabled = true;
+
+      //TODO - have a timer in the gamescene count down to start the game and make it ready, not the gameboard itself.
+      _moveTimerLabel.Initialize(GetNode<Timer>("MoveTimer"));
+      _moveTimerLabel.Start();
 
       // The game board is now ready for input.
       _isReady = true;
@@ -77,7 +85,6 @@ public partial class GameBoard : Node2D
    /// </summary>
    public override void _ExitTree()
    {
-      //_animatedPointsManager.Stop();
       base._ExitTree();
    }
 
@@ -312,6 +319,10 @@ public partial class GameBoard : Node2D
 
          // Handle the results of the matches.
          HandleMatches(matches);
+
+         // Reset the move timer.
+         //TODO - scale this based on level/difficulty
+         _moveTimerLabel.ResetTime();
       }
       else
       {
@@ -841,6 +852,10 @@ public partial class GameBoard : Node2D
       return tile;
    }
 
+   #endregion
+
+   #region Event Handlers
+
    /// <summary>
    /// Handle mouse events that have bubbled up from a gem.
    /// </summary>
@@ -946,6 +961,19 @@ public partial class GameBoard : Node2D
       }
    }
 
+   /// <summary>
+   /// Handles when the move timer has timed out.
+   /// </summary>
+   private void _moveTimer_Timeout()
+   {
+      //TODO game over!
+      MoveTimerLabel moveTimerLabel = _uiNode.GetNode<MoveTimerLabel>("MoveTimerLabel");
+      if (moveTimerLabel != null)
+      {
+         moveTimerLabel.ResetAppearance();
+      }
+   }
+
    #endregion
 
    #region Private Members
@@ -971,6 +999,12 @@ public partial class GameBoard : Node2D
 
    // Random number generator.
    private System.Random _rngesus;
+
+   // Reference to the UI node unique to this game board.
+   private Node2D _uiNode;
+
+   // Reference to the object that handles the move timer.
+   private MoveTimerLabel _moveTimerLabel;
 
    // Boolean flag to indicate the board is ready for player input.
    // Primarily used to block generation sounds at start-up.

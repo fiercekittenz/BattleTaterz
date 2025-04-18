@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://bso01n3chx8o3"]
+[gd_scene load_steps=4 format=3 uid="uid://bso01n3chx8o3"]
 
 [ext_resource type="Script" uid="uid://c5wl3k6ahnbjm" path="res://Scenes/GameBoard.cs" id="1_7oe7p"]
+[ext_resource type="Theme" uid="uid://uy7p5q4ssdwt" path="res://UIResources/ui_theme.tres" id="3_fkmb8"]
+[ext_resource type="Script" uid="uid://c4pm1ha6tc34e" path="res://Core/UI/MoveTimerLabel.cs" id="3_y2qi3"]
 
 [node name="GameBoard" type="Node2D"]
 script = ExtResource("1_7oe7p")
@@ -8,3 +10,26 @@ script = ExtResource("1_7oe7p")
 [node name="AnimatedPointPool" type="Node2D" parent="."]
 top_level = true
 visibility_layer = 3
+
+[node name="MoveTimer" type="Timer" parent="."]
+one_shot = true
+ignore_time_scale = true
+
+[node name="UI" type="Node2D" parent="."]
+top_level = true
+
+[node name="MoveTimerLabel" type="Label" parent="UI"]
+top_level = true
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -380.0
+offset_top = -58.0
+grow_horizontal = 0
+grow_vertical = 0
+theme = ExtResource("3_fkmb8")
+text = "0:00s"
+horizontal_alignment = 2
+script = ExtResource("3_y2qi3")
