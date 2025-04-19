@@ -1,3 +1,4 @@
+using BattleTaterz.Core.UI;
 using Godot;
 using System;
 using System.Threading.Tasks;
@@ -12,13 +13,20 @@ public partial class MoveTimerLabel : Label
    /// <summary>
    /// Default time for a move. Serves as the "starting" value and may change based on levels.
    /// </summary>
-   public static double MoveTimerDefault = 7.0;
+   public static double MoveTimerDefault = 15.0;
+
+   public static double WarnThreshold = 5.0;
 
    public bool IsWarning { get; set; } = false;
 
    public Godot.Color DefaultColor { get; set; } = new Godot.Color(167, 144, 234, 1);
 
    public Godot.Color FlashingColor { get; set; } = new Godot.Color(255, 93, 166);
+
+   /// <summary>
+   /// An event that can be listened to for when the timer has run out.
+   /// </summary>
+   public event EventHandler OnTimerFinished;
 
    #endregion
 
@@ -46,50 +54,51 @@ public partial class MoveTimerLabel : Label
    {
       if (_isInitialized && _timer != null && !_timer.Paused)
       {
-         if (_timer.TimeLeft > 5)
+         int rounded = (int)Math.Ceiling(_timer.TimeLeft);
+
+         if (_timer.TimeLeft >= WarnThreshold)
          {
-            int rounded = (int)Math.Ceiling(_timer.TimeLeft);
             Text = $"{rounded}";
          }
          else
          {
-            IsWarning = true;
-            Warn();
-            Text = string.Format("{0:N2}", _timer.TimeLeft);
-         }
-      }
-   }
+            if (!IsWarning)
+            {
+               Warn();
+               IsWarning = true;
+            }
 
-   public void Update()
-   {
-      if (_timer.TimeLeft > 5)
-      {
-         int rounded = (int)Math.Ceiling(_timer.TimeLeft);
-         Text = $"{rounded}";
-      }
-      else
-      {
-         IsWarning = true;
-         Warn();
-         Text = string.Format("{0:N2}", _timer.TimeLeft);
+            if (_timer.TimeLeft >= 1 && _timer.TimeLeft < WarnThreshold)
+            {
+               Text = string.Format($"{rounded}", _timer.TimeLeft);
+            }
+            else
+            {
+               Text = string.Format("{0:N2}", _timer.TimeLeft);
+            }
+         }
       }
    }
 
    public void Warn()
    {
-      //if (!IsWarning)
-      //{
-      //   Tween flashing = GetTree().CreateTween();
-      //   flashing.SetParallel(true);
-      //   flashing.TweenProperty(this, "theme_override_colors/font_color", FlashingColor, 1.0f).SetEase(Tween.EaseType.InOut);
-      //   flashing.TweenProperty(this, "modulate:a", 0.0f, 0.2f).SetEase(Tween.EaseType.InOut);
-      //   flashing.Finished += (() =>
-      //   {
-      //      // Clean up!
-      //      ResetAppearance();
-      //      flashing.Kill();
-      //   });
-      //}
+      if (!IsWarning)
+      {
+         Tween flashing = GetTree().CreateTween();
+         flashing.SetParallel(false);
+         flashing.TweenProperty(this, "modulate:a", 0.0f, 0.5f).SetEase(Tween.EaseType.Out);
+         flashing.TweenProperty(this, "modulate:a", 1.0f, 0.5f).SetEase(Tween.EaseType.Out);
+
+         int numLoops = ((int)WarnThreshold - 1) * 2;
+         flashing.SetLoops(numLoops);
+
+         flashing.Finished += (() =>
+         {
+            // Clean up!
+            flashing.Stop();
+            flashing.Kill();
+         });
+      }
    }
 
    public void ResetTime()
@@ -103,14 +112,14 @@ public partial class MoveTimerLabel : Label
 
    public void ResetAppearance()
    {
-      Set("theme_override_colors/font_color", DefaultColor);
       Set("modulate:a", 1.0f);
       IsWarning = false;
    }
 
    private void _timer_Timeout()
    {
-      throw new NotImplementedException();
+      ResetAppearance();
+      OnTimerFinished?.Invoke(this, new EventArgs());
    }
 
    #endregion

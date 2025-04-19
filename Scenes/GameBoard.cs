@@ -47,7 +47,10 @@ public partial class GameBoard : Node2D
       // Cache specific nodes.
       _gameScene = GetParent<GameScene>();
       _uiNode = GetNode<Node2D>("UI");
+
+      // Setup the timer.
       _moveTimerLabel = _uiNode.GetNode<MoveTimerLabel>("MoveTimerLabel");
+      _moveTimerLabel.OnTimerFinished += _moveTimerLabel_OnTimerFinished;
 
       // Create RNGesus
       _rngesus = new Random(Guid.NewGuid().GetHashCode());
@@ -64,7 +67,7 @@ public partial class GameBoard : Node2D
       Generate();
       DebugLogger.Instance.Enabled = true;
 
-      //TODO - have a timer in the gamescene count down to start the game and make it ready, not the gameboard itself.
+      // Initialize the move timer for this game board.
       _moveTimerLabel.Initialize(GetNode<Timer>("MoveTimer"));
       _moveTimerLabel.Start();
 
@@ -971,6 +974,21 @@ public partial class GameBoard : Node2D
       if (moveTimerLabel != null)
       {
          moveTimerLabel.ResetAppearance();
+      }
+   }
+
+   /// <summary>
+   /// Handles when the move timer has run out.
+   /// </summary>
+   /// <param name="sender"></param>
+   /// <param name="e"></param>
+   private void _moveTimerLabel_OnTimerFinished(object sender, EventArgs e)
+   {
+      if (sender == _moveTimerLabel)
+      {
+         //TODO - don't reset. This is temporary.
+         // Time has run out. Tell the player of this board the game is over for them.
+         _moveTimerLabel.ResetTime();
       }
    }
 
