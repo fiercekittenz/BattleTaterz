@@ -77,6 +77,7 @@ namespace BattleTaterz.Core.UI
          _label.GlobalPosition = globalPosition;
          _label.Modulate = new Godot.Color(_label.Modulate.R, _label.Modulate.G, _label.Modulate.B, 1.0f);
          _label.Scale = new Godot.Vector2(1.0f, 1.0f);
+         _label.ZIndex = 10;
          _label.Show();
 
          // Create a tween for the label and animate it.

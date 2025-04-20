@@ -1,34 +1,65 @@
-[gd_scene load_steps=4 format=3 uid="uid://bso01n3chx8o3"]
+[gd_scene load_steps=5 format=3 uid="uid://bso01n3chx8o3"]
 
 [ext_resource type="Script" uid="uid://c5wl3k6ahnbjm" path="res://Scenes/GameBoard.cs" id="1_7oe7p"]
 [ext_resource type="Theme" uid="uid://uy7p5q4ssdwt" path="res://UIResources/ui_theme.tres" id="3_fkmb8"]
 [ext_resource type="Script" uid="uid://c4pm1ha6tc34e" path="res://Core/UI/MoveTimerLabel.cs" id="3_y2qi3"]
+[ext_resource type="Texture2D" uid="uid://dag5lo7614rw7" path="res://Assets/Tiles/BoardBackground_Full.png" id="5_ontlx"]
 
 [node name="GameBoard" type="Node2D"]
 script = ExtResource("1_7oe7p")
 
 [node name="AnimatedPointPool" type="Node2D" parent="."]
 top_level = true
-visibility_layer = 3
+visibility_layer = 1048575
+z_index = 10
+z_as_relative = false
 
 [node name="MoveTimer" type="Timer" parent="."]
 one_shot = true
 ignore_time_scale = true
 
-[node name="UI" type="Node2D" parent="."]
-top_level = true
+[node name="Tiles" type="Node2D" parent="."]
+z_index = 2
+z_as_relative = false
 
-[node name="MoveTimerLabel" type="Label" parent="UI"]
+[node name="UI" type="VBoxContainer" parent="."]
+z_index = 2
+custom_minimum_size = Vector2(630, 700)
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Background" type="TextureRect" parent="UI"]
+layout_mode = 2
+texture = ExtResource("5_ontlx")
+
+[node name="Labels" type="HBoxContainer" parent="UI"]
+custom_minimum_size = Vector2(630, 58)
+layout_mode = 2
+
+[node name="ScoreLabel" type="Label" parent="UI/Labels"]
+layout_mode = 2
+theme = ExtResource("3_fkmb8")
+text = "Score: "
+
+[node name="ScoreValueLabel" type="Label" parent="UI/Labels"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme = ExtResource("3_fkmb8")
+text = "0"
+
+[node name="MoveTimerLabela" type="Label" parent="UI/Labels"]
+visible = false
 top_level = true
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -380.0
-offset_top = -58.0
-grow_horizontal = 0
-grow_vertical = 0
+layout_mode = 2
+theme = ExtResource("3_fkmb8")
+text = "0:00s"
+horizontal_alignment = 2
+script = ExtResource("3_y2qi3")
+
+[node name="MoveTimerLabel" type="Label" parent="UI/Labels"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 3
 theme = ExtResource("3_fkmb8")
 text = "0:00s"
 horizontal_alignment = 2

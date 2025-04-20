@@ -78,9 +78,12 @@ public partial class Tile : Node2D
    /// <param name="shouldAnimate"></param>
    public void MoveTile(GameBoard parent, int row, int column, bool isNew, bool shouldAnimate)
    {
+      float offset = (Globals.TileSize / 2) + 10;
+
       Row = row;
       Column = column;
-      Godot.Vector2 newPosition = new Godot.Vector2(column * Globals.TileSize, row * Globals.TileSize);
+      Godot.Vector2 newPosition = new Godot.Vector2((column * Globals.TileSize) + offset, 
+                                                    (row * Globals.TileSize) + offset);
 
       if (shouldAnimate)
       {
@@ -88,7 +91,7 @@ public partial class Tile : Node2D
          {
             // This is a freshly generated tile. It won't have a position yet, so the
             // start position needs to be above the column it'll drop from.
-            Position = new Godot.Vector2(column * Globals.TileSize, Globals.TileSize * -1);
+            Position = new Godot.Vector2((column * Globals.TileSize) + offset, (Globals.TileSize + offset) * -1);
          }
 
          var tween = GetTree().CreateTween();

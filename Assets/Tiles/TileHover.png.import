@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b5m44khvv5tt"
-path="res://.godot/imported/TempPuzzlePieceBorder_Hover.png-b8b5f7c5ea3b82b3620a9071b6a0c25e.ctex"
+path="res://.godot/imported/TileHover.png-0d9beecce9ad7ba94a984ad079d26b0c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Tiles/TempPuzzlePieceBorder_Hover.png"
-dest_files=["res://.godot/imported/TempPuzzlePieceBorder_Hover.png-b8b5f7c5ea3b82b3620a9071b6a0c25e.ctex"]
+source_file="res://Assets/Tiles/TileHover.png"
+dest_files=["res://.godot/imported/TileHover.png-0d9beecce9ad7ba94a984ad079d26b0c.ctex"]
 
 [params]
 

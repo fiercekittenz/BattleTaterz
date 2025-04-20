@@ -46,13 +46,11 @@ public partial class GameBoard : Node2D
 
       // Cache specific nodes.
       _gameScene = GetParent<GameScene>();
-      _uiNode = GetNode<Node2D>("UI");
+      _uiNode = GetNode<VBoxContainer>("UI");
 
       // Setup the timer.
-      _moveTimerLabel = _uiNode.GetNode<MoveTimerLabel>("MoveTimerLabel");
+      _moveTimerLabel = _uiNode.GetNode<MoveTimerLabel>("Labels/MoveTimerLabel");
       _moveTimerLabel.OnTimerFinished += _moveTimerLabel_OnTimerFinished;
-      //_moveTimerLabel.Position = new Godot.Vector2((Globals.TileSize * Globals.TileCount) - (_moveTimerLabel.Size.X), 
-      //                                             (Globals.TileSize * Globals.TileCount) + (_moveTimerLabel.Size.Y + 5));
 
       // Create RNGesus
       _rngesus = new Random(Guid.NewGuid().GetHashCode());
@@ -146,6 +144,14 @@ public partial class GameBoard : Node2D
 
       // The game's afoot!
       return true;
+   }
+
+   public void Relocate(float x, float y)
+   {
+      Godot.Vector2 newPosition = new Godot.Vector2(x, y);
+
+      GlobalPosition = newPosition;      
+      //GetNode<VBoxContainer>("UI").GlobalPosition = newPosition;
    }
 
    /// <summary>
@@ -620,7 +626,7 @@ public partial class GameBoard : Node2D
             DebugLogger.Instance.Log($"HandleMatches() scoreUpdateResults (BasePoints = {scoreUpdateResults.BasePoints}) (Bonus = {scoreUpdateResults.BonusPointsRewarded})", LogLevel.Info);
 
             _animatedPointsManager.Play(match.GlobalPositionAverage, scoreUpdateResults);
-            _gameScene.UINode.GetNode<Godot.Label>("ScoreVal").Text = scoreUpdateResults.UpdatedScore.ToString();
+            _uiNode.GetNode<Godot.Label>("Labels/ScoreValueLabel").Text = scoreUpdateResults.UpdatedScore.ToString();
          }
 
          // Remove the matched tiles from the board.
@@ -834,21 +840,6 @@ public partial class GameBoard : Node2D
    /// <exception cref="Exception"></exception>
    private Tile GenerateTile(int row, int column)
    {
-      // Create the background for this location on the board.
-      //var background = new Godot.Sprite2D();
-      //if (column % 2 == 0)
-      //{
-      //   background.Texture = GD.Load<Texture2D>("res://Assets/Tiles/TileBackgroundA.png");
-      //}
-      //else
-      //{
-      //   background.Texture = GD.Load<Texture2D>("res://Assets/Tiles/TileBackgroundB.png");
-      //}
-
-      //background.VisibilityLayer = 1;
-      //AddChild(background);
-      //background.Position = new Godot.Vector2(column * Globals.TileSize, row * Globals.TileSize);
-
       // Create the tile, which will hold the gem.
       var tile = GD.Load<PackedScene>("res://GameObjectResources/Grid/Tile.tscn").Instantiate<Tile>();
       if (tile == null)
@@ -857,7 +848,6 @@ public partial class GameBoard : Node2D
          throw new Exception("Could not instantiate tile.");
       }
 
-      tile.VisibilityLayer = 2;
       AddChild(tile);
       RequestTileMove(tile, row, column, true, _isReady);
 
@@ -865,7 +855,6 @@ public partial class GameBoard : Node2D
       if (gem != null)
       {
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
-         gem.VisibilityLayer = 3;
          gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
          gem.OnGemMouseEvent += Gem_OnGemMouseEvent;
          tile.SetGemReference(gem, row, column, Globals.TileSize);
@@ -1040,7 +1029,7 @@ public partial class GameBoard : Node2D
    private System.Random _rngesus;
 
    // Reference to the UI node unique to this game board.
-   private Node2D _uiNode;
+   private VBoxContainer _uiNode;
 
    // Reference to the object that handles the move timer.
    private MoveTimerLabel _moveTimerLabel;

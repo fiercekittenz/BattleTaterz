@@ -23,7 +23,7 @@ public partial class GameScene : Node2D
    /// <summary>
    /// Accessor: UI node
    /// </summary>
-   public Node2D UINode
+   public Control UINode
    {
       get { return _uiNode; }
    }
@@ -45,8 +45,12 @@ public partial class GameScene : Node2D
       DebugLogger.Instance.Enabled = LoggingEnabled;
       DebugLogger.Instance.LoggingLevel = LoggingLevel;
 
-      _uiNode = GetNode<Node2D>("UI");
+      _uiNode = GetNode<Control>("UI");
       _audioNode = GetNode<Node2D>("Audio");
+
+      // Setup the cloud manager.
+      _cloudManager = GetNode<Node2D>("Background").GetNode<CloudManager>("CloudManager");
+      _cloudManager.Initialize(this);
 
       _gameBoardScene = GD.Load<PackedScene>("res://Scenes/GameBoard.tscn");
 
@@ -68,7 +72,7 @@ public partial class GameScene : Node2D
 
       float centeredX = (GetViewportRect().Size.X / 2) - ((Globals.TileSize * Globals.TileCount) / 2);
       float centeredY = (GetViewportRect().Size.Y / 2) - ((Globals.TileSize * Globals.TileCount) / 2);
-      gameBoard.Position = new Vector2(centeredX, centeredY);
+      gameBoard.Relocate(centeredX, centeredY);
 
       _activeBoards.Add(playerInfo, gameBoard);
       AddChild(gameBoard);
@@ -84,8 +88,11 @@ public partial class GameScene : Node2D
    // Pre-loaded game board scene data for quicker instantiation.
    private PackedScene _gameBoardScene = null;
 
+   // Reference to the cloud manager, which animates the clouds in the background.
+   private CloudManager _cloudManager = null;
+
    // Cache of the UI node so we don't have to look for it every time we need to access a UI element.
-   private Node2D _uiNode = null;
+   private Control _uiNode = null;
 
    // Local ref to the audio node.
    private Node2D _audioNode = null;
