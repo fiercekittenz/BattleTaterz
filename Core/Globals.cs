@@ -34,5 +34,10 @@ namespace BattleTaterz.Core
       /// this value restricts the number of sounds played.
       /// </summary>
       public static int MaxHypeLevel = 3;
+
+      /// <summary>
+      /// RNGesus engine.
+      /// </summary>
+      public static Random RNGesus = new Random(Guid.NewGuid().GetHashCode());
    }
 }

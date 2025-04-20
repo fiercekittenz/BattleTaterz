@@ -46,14 +46,10 @@ public partial class GameBoard : Node2D
 
       // Cache specific nodes.
       _gameScene = GetParent<GameScene>();
-      _uiNode = GetNode<Control>("UI");
-
-      // Add the background
-      var background = GD.Load<PackedScene>("res://Scenes/GameBoardBackground.tscn").Instantiate<GameBoardBackground>();
-      background.AddChild(background);
+      _uiNode = GetNode<VBoxContainer>("UI");
 
       // Setup the timer.
-      _moveTimerLabel = _uiNode.GetNode<MoveTimerLabel>("MoveTimerLabel");
+      _moveTimerLabel = _uiNode.GetNode<MoveTimerLabel>("Labels/MoveTimerLabel");
       _moveTimerLabel.OnTimerFinished += _moveTimerLabel_OnTimerFinished;
 
       // Create RNGesus
@@ -148,6 +144,14 @@ public partial class GameBoard : Node2D
 
       // The game's afoot!
       return true;
+   }
+
+   public void Relocate(float x, float y)
+   {
+      Godot.Vector2 newPosition = new Godot.Vector2(x, y);
+
+      GlobalPosition = newPosition;      
+      //GetNode<VBoxContainer>("UI").GlobalPosition = newPosition;
    }
 
    /// <summary>
@@ -622,7 +626,7 @@ public partial class GameBoard : Node2D
             DebugLogger.Instance.Log($"HandleMatches() scoreUpdateResults (BasePoints = {scoreUpdateResults.BasePoints}) (Bonus = {scoreUpdateResults.BonusPointsRewarded})", LogLevel.Info);
 
             _animatedPointsManager.Play(match.GlobalPositionAverage, scoreUpdateResults);
-            _gameScene.UINode.GetNode<Godot.Label>("ScoreVal").Text = scoreUpdateResults.UpdatedScore.ToString();
+            _uiNode.GetNode<Godot.Label>("Labels/ScoreValueLabel").Text = scoreUpdateResults.UpdatedScore.ToString();
          }
 
          // Remove the matched tiles from the board.
@@ -1025,7 +1029,7 @@ public partial class GameBoard : Node2D
    private System.Random _rngesus;
 
    // Reference to the UI node unique to this game board.
-   private Control _uiNode;
+   private VBoxContainer _uiNode;
 
    // Reference to the object that handles the move timer.
    private MoveTimerLabel _moveTimerLabel;

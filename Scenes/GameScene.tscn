@@ -1,7 +1,8 @@
-[gd_scene load_steps=23 format=3 uid="uid://dwq1urk6jpoqr"]
+[gd_scene load_steps=24 format=3 uid="uid://dwq1urk6jpoqr"]
 
 [ext_resource type="Script" uid="uid://bb68lhat8iyfp" path="res://Scenes/GameScene.cs" id="1_gipt1"]
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
+[ext_resource type="Script" uid="uid://d3h37vriq1afw" path="res://Core/UI/CloudManager.cs" id="3_pgw7i"]
 [ext_resource type="Theme" uid="uid://uy7p5q4ssdwt" path="res://UIResources/ui_theme.tres" id="4_wukv0"]
 [ext_resource type="FontFile" uid="uid://cbwdkgmajnr1m" path="res://Assets/Fonts/Boogaloo-Regular.ttf" id="5_hgvmy"]
 [ext_resource type="Script" uid="uid://crw08tcl2sd8q" path="res://Scenes/MasterVolumeSlider.cs" id="6_ebcm8"]
@@ -63,7 +64,16 @@ script = ExtResource("1_gipt1")
 [node name="Background" type="Node2D" parent="."]
 metadata/_edit_lock_ = true
 
+[node name="CloudManager" type="Node2D" parent="Background"]
+z_index = 1
+script = ExtResource("3_pgw7i")
+
+[node name="CloudSpawnTimer" type="Timer" parent="Background/CloudManager"]
+wait_time = 2.0
+autostart = true
+
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Background"]
+z_as_relative = false
 position = Vector2(960, 540)
 sprite_frames = ExtResource("2_pgw7i")
 
@@ -138,27 +148,10 @@ stream = ExtResource("16_gipt1")
 volume_db = -15.0
 
 [node name="UI" type="Control" parent="."]
+top_level = true
+z_index = 5
 layout_mode = 3
 anchors_preset = 0
-
-[node name="ScoreLbl" type="Label" parent="UI"]
-top_level = true
-offset_left = 4.0
-offset_top = 1013.0
-offset_right = 169.0
-offset_bottom = 1077.0
-theme = ExtResource("4_wukv0")
-text = "Score:"
-
-[node name="ScoreVal" type="Label" parent="UI"]
-top_level = true
-custom_minimum_size = Vector2(200, 0)
-offset_left = 169.0
-offset_top = 1013.0
-offset_right = 369.0
-offset_bottom = 1077.0
-theme = ExtResource("4_wukv0")
-text = "0"
 
 [node name="Control" type="Control" parent="UI"]
 layout_mode = 3

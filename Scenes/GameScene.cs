@@ -48,6 +48,10 @@ public partial class GameScene : Node2D
       _uiNode = GetNode<Control>("UI");
       _audioNode = GetNode<Node2D>("Audio");
 
+      // Setup the cloud manager.
+      _cloudManager = GetNode<Node2D>("Background").GetNode<CloudManager>("CloudManager");
+      _cloudManager.Initialize(this);
+
       _gameBoardScene = GD.Load<PackedScene>("res://Scenes/GameBoard.tscn");
 
       //TODO - this is temporary for testing the game board.
@@ -66,10 +70,9 @@ public partial class GameScene : Node2D
       GameBoard gameBoard = _gameBoardScene.Instantiate<GameBoard>();
       gameBoard.Player = playerInfo;
 
-      //float centeredX = (GetViewportRect().Size.X / 2) - ((Globals.TileSize * Globals.TileCount) / 2) + 1;
-      //float centeredY = (GetViewportRect().Size.Y / 2) - ((Globals.TileSize * Globals.TileCount) / 2) + 1;
-      //gameBoard.Position = new Vector2(centeredX, centeredY);
-      //gameBoard.GetNode<Control>("UI").Position = new Vector2(centeredX, centeredY);
+      float centeredX = (GetViewportRect().Size.X / 2) - ((Globals.TileSize * Globals.TileCount) / 2);
+      float centeredY = (GetViewportRect().Size.Y / 2) - ((Globals.TileSize * Globals.TileCount) / 2);
+      gameBoard.Relocate(centeredX, centeredY);
 
       _activeBoards.Add(playerInfo, gameBoard);
       AddChild(gameBoard);
@@ -84,6 +87,9 @@ public partial class GameScene : Node2D
 
    // Pre-loaded game board scene data for quicker instantiation.
    private PackedScene _gameBoardScene = null;
+
+   // Reference to the cloud manager, which animates the clouds in the background.
+   private CloudManager _cloudManager = null;
 
    // Cache of the UI node so we don't have to look for it every time we need to access a UI element.
    private Control _uiNode = null;
