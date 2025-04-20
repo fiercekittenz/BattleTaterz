@@ -1,12 +1,12 @@
 [gd_resource type="SpriteFrames" load_steps=2 format=3 uid="uid://c7wja4ys6g77g"]
 
-[ext_resource type="Texture2D" uid="uid://dojsrtfqwqn2b" path="res://Assets/Backgrounds/MainBackground.png" id="1_21ilk"]
+[ext_resource type="Texture2D" uid="uid://dblru40h0pyko" path="res://Assets/Backgrounds/MainBackground_Mountains.png" id="1_31l7l"]
 
 [resource]
 animations = [{
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("1_21ilk")
+"texture": ExtResource("1_31l7l")
 }],
 "loop": true,
 "name": &"default",

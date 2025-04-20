@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://dwq1urk6jpoqr"]
+[gd_scene load_steps=25 format=3 uid="uid://dwq1urk6jpoqr"]
 
 [ext_resource type="Script" uid="uid://bb68lhat8iyfp" path="res://Scenes/GameScene.cs" id="1_gipt1"]
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
@@ -20,14 +20,15 @@
 [ext_resource type="AudioStream" uid="uid://3046vu847x7g" path="res://Assets/Audio/Drop1.mp3" id="17_rsfko"]
 [ext_resource type="AudioStream" uid="uid://djw1cxgth0vv0" path="res://Assets/Audio/Drop2.mp3" id="18_82uqo"]
 [ext_resource type="AudioStream" uid="uid://crjywsuc7w7tw" path="res://Assets/Audio/Background_Main.mp3" id="19_bl770"]
+[ext_resource type="SpriteFrames" uid="uid://dsvk6eq5isuke" path="res://SpriteResources/logo.tres" id="21_v7xhk"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fevyy"]
-bg_color = Color(0.658319, 0.53659, 1, 1)
+bg_color = Color(0.687731, 0.611753, 0.90921, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.360836, 0.0012693, 0.580251, 1)
+border_color = Color(0.498039, 0.27451, 0.717647, 1)
 corner_radius_top_left = 5
 corner_radius_top_right = 5
 corner_radius_bottom_right = 5
@@ -40,21 +41,21 @@ content_margin_left = 1.0
 content_margin_top = 1.0
 content_margin_right = 1.0
 content_margin_bottom = 1.0
-bg_color = Color(1, 0.623529, 0.85098, 1)
+bg_color = Color(0.972549, 0.882353, 1, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_bottom = 2
-border_color = Color(0.360784, 0, 0.580392, 1)
+border_color = Color(0.498039, 0.27451, 0.717647, 1)
 expand_margin_top = 20.0
 expand_margin_bottom = 20.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pdsj5"]
-bg_color = Color(0.76134, 0.754421, 1, 1)
+bg_color = Color(0.972549, 0.882353, 1, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.360784, 0, 0.580392, 1)
+border_color = Color(0.498039, 0.27451, 0.717647, 1)
 expand_margin_top = 20.0
 expand_margin_bottom = 20.0
 
@@ -189,3 +190,7 @@ step = 0.001
 value = 0.5
 script = ExtResource("6_ebcm8")
 AudioBusName = "Master"
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="UI"]
+position = Vector2(203, 107)
+sprite_frames = ExtResource("21_v7xhk")
