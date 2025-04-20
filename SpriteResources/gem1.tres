@@ -1,12 +1,12 @@
 [gd_resource type="SpriteFrames" load_steps=2 format=3 uid="uid://pufwl8ldwao"]
 
-[ext_resource type="Texture2D" uid="uid://dm5uwxyhfgbxe" path="res://Assets/Tiles/gem1.png" id="1_vv76n"]
+[ext_resource type="Texture2D" uid="uid://c020iyvmjj88e" path="res://Assets/Tiles/BlueGem.png" id="1_02sv2"]
 
 [resource]
 animations = [{
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("1_vv76n")
+"texture": ExtResource("1_02sv2")
 }],
 "loop": true,
 "name": &"default",

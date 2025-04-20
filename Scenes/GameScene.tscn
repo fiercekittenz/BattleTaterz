@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://dwq1urk6jpoqr"]
+[gd_scene load_steps=23 format=3 uid="uid://dwq1urk6jpoqr"]
 
 [ext_resource type="Script" uid="uid://bb68lhat8iyfp" path="res://Scenes/GameScene.cs" id="1_gipt1"]
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
@@ -15,6 +15,7 @@
 [ext_resource type="AudioStream" uid="uid://joxuek3ba8xs" path="res://Assets/Audio/MatchHypeLevel3.ogg" id="14_odb6r"]
 [ext_resource type="AudioStream" uid="uid://dqkaue4sfte77" path="res://Assets/Audio/Background.wav" id="15_p4lnl"]
 [ext_resource type="AudioStream" uid="uid://c6u33jkgcesxi" path="res://Assets/Audio/SelectSecondaryGem.mp3" id="16_6gwdq"]
+[ext_resource type="AudioStream" uid="uid://mryyvilonf6j" path="res://Assets/Audio/TimerFast.mp3" id="16_gipt1"]
 [ext_resource type="AudioStream" uid="uid://3046vu847x7g" path="res://Assets/Audio/Drop1.mp3" id="17_rsfko"]
 [ext_resource type="AudioStream" uid="uid://djw1cxgth0vv0" path="res://Assets/Audio/Drop2.mp3" id="18_82uqo"]
 [ext_resource type="AudioStream" uid="uid://crjywsuc7w7tw" path="res://Assets/Audio/Background_Main.mp3" id="19_bl770"]
@@ -131,6 +132,10 @@ stream = ExtResource("19_bl770")
 volume_db = -30.0
 bus = &"music"
 parameters/looping = true
+
+[node name="Sound_TimerFast" type="AudioStreamPlayer" parent="Audio"]
+stream = ExtResource("16_gipt1")
+volume_db = -15.0
 
 [node name="UI" type="Node2D" parent="."]
 

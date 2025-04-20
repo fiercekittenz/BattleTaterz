@@ -51,6 +51,8 @@ public partial class GameBoard : Node2D
       // Setup the timer.
       _moveTimerLabel = _uiNode.GetNode<MoveTimerLabel>("MoveTimerLabel");
       _moveTimerLabel.OnTimerFinished += _moveTimerLabel_OnTimerFinished;
+      //_moveTimerLabel.Position = new Godot.Vector2((Globals.TileSize * Globals.TileCount) - (_moveTimerLabel.Size.X), 
+      //                                             (Globals.TileSize * Globals.TileCount) + (_moveTimerLabel.Size.Y + 5));
 
       // Create RNGesus
       _rngesus = new Random(Guid.NewGuid().GetHashCode());
@@ -67,7 +69,8 @@ public partial class GameBoard : Node2D
       Generate();
       DebugLogger.Instance.Enabled = true;
 
-      // Initialize the move timer for this game board.
+      // Initialize the move timer for this game board after it's been generated.
+      //TODO - need a countdown timer before doing this
       _moveTimerLabel.Initialize(GetNode<Timer>("MoveTimer"));
       _moveTimerLabel.Start();
 
@@ -831,6 +834,22 @@ public partial class GameBoard : Node2D
    /// <exception cref="Exception"></exception>
    private Tile GenerateTile(int row, int column)
    {
+      // Create the background for this location on the board.
+      //var background = new Godot.Sprite2D();
+      //if (column % 2 == 0)
+      //{
+      //   background.Texture = GD.Load<Texture2D>("res://Assets/Tiles/TileBackgroundA.png");
+      //}
+      //else
+      //{
+      //   background.Texture = GD.Load<Texture2D>("res://Assets/Tiles/TileBackgroundB.png");
+      //}
+
+      //background.VisibilityLayer = 1;
+      //AddChild(background);
+      //background.Position = new Godot.Vector2(column * Globals.TileSize, row * Globals.TileSize);
+
+      // Create the tile, which will hold the gem.
       var tile = GD.Load<PackedScene>("res://GameObjectResources/Grid/Tile.tscn").Instantiate<Tile>();
       if (tile == null)
       {
@@ -838,6 +857,7 @@ public partial class GameBoard : Node2D
          throw new Exception("Could not instantiate tile.");
       }
 
+      tile.VisibilityLayer = 2;
       AddChild(tile);
       RequestTileMove(tile, row, column, true, _isReady);
 
@@ -845,6 +865,7 @@ public partial class GameBoard : Node2D
       if (gem != null)
       {
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
+         gem.VisibilityLayer = 3;
          gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
          gem.OnGemMouseEvent += Gem_OnGemMouseEvent;
          tile.SetGemReference(gem, row, column, Globals.TileSize);

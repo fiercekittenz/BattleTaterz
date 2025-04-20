@@ -13,7 +13,7 @@ public partial class MoveTimerLabel : Label
    /// <summary>
    /// Default time for a move. Serves as the "starting" value and may change based on levels.
    /// </summary>
-   public static double MoveTimerDefault = 15.0;
+   public static double MoveTimerDefault = 20.0;
 
    public static double WarnThreshold = 5.0;
 
@@ -83,14 +83,12 @@ public partial class MoveTimerLabel : Label
    public void Warn()
    {
       if (!IsWarning)
-      {
+      {         
          Tween flashing = GetTree().CreateTween();
          flashing.SetParallel(false);
          flashing.TweenProperty(this, "modulate:a", 0.0f, 0.5f).SetEase(Tween.EaseType.Out);
          flashing.TweenProperty(this, "modulate:a", 1.0f, 0.5f).SetEase(Tween.EaseType.Out);
-
-         int numLoops = ((int)WarnThreshold - 1) * 2;
-         flashing.SetLoops(numLoops);
+         flashing.SetLoops(2);
 
          flashing.Finished += (() =>
          {
@@ -128,6 +126,9 @@ public partial class MoveTimerLabel : Label
 
    // Reference to the move timer on the game board.
    private Timer _timer;
+
+   // Reference to the tween that will run when the warning period is hit.
+   private Tween _flashing;
 
    // Denotes if the label has been initialized or not. Should only be done once.
    private bool _isInitialized = false;
