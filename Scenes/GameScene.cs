@@ -23,7 +23,7 @@ public partial class GameScene : Node2D
    /// <summary>
    /// Accessor: UI node
    /// </summary>
-   public Node2D UINode
+   public Control UINode
    {
       get { return _uiNode; }
    }
@@ -45,7 +45,7 @@ public partial class GameScene : Node2D
       DebugLogger.Instance.Enabled = LoggingEnabled;
       DebugLogger.Instance.LoggingLevel = LoggingLevel;
 
-      _uiNode = GetNode<Node2D>("UI");
+      _uiNode = GetNode<Control>("UI");
       _audioNode = GetNode<Node2D>("Audio");
 
       _gameBoardScene = GD.Load<PackedScene>("res://Scenes/GameBoard.tscn");
@@ -66,9 +66,10 @@ public partial class GameScene : Node2D
       GameBoard gameBoard = _gameBoardScene.Instantiate<GameBoard>();
       gameBoard.Player = playerInfo;
 
-      float centeredX = (GetViewportRect().Size.X / 2) - ((Globals.TileSize * Globals.TileCount) / 2);
-      float centeredY = (GetViewportRect().Size.Y / 2) - ((Globals.TileSize * Globals.TileCount) / 2);
-      gameBoard.Position = new Vector2(centeredX, centeredY);
+      //float centeredX = (GetViewportRect().Size.X / 2) - ((Globals.TileSize * Globals.TileCount) / 2) + 1;
+      //float centeredY = (GetViewportRect().Size.Y / 2) - ((Globals.TileSize * Globals.TileCount) / 2) + 1;
+      //gameBoard.Position = new Vector2(centeredX, centeredY);
+      //gameBoard.GetNode<Control>("UI").Position = new Vector2(centeredX, centeredY);
 
       _activeBoards.Add(playerInfo, gameBoard);
       AddChild(gameBoard);
@@ -85,7 +86,7 @@ public partial class GameScene : Node2D
    private PackedScene _gameBoardScene = null;
 
    // Cache of the UI node so we don't have to look for it every time we need to access a UI element.
-   private Node2D _uiNode = null;
+   private Control _uiNode = null;
 
    // Local ref to the audio node.
    private Node2D _audioNode = null;

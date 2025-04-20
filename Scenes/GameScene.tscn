@@ -137,7 +137,9 @@ parameters/looping = true
 stream = ExtResource("16_gipt1")
 volume_db = -15.0
 
-[node name="UI" type="Node2D" parent="."]
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
 
 [node name="ScoreLbl" type="Label" parent="UI"]
 top_level = true

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cqvlc0wakaa3t"
-path="res://.godot/imported/TempPuzzlePieceBorder_Selected.png-7ebc9b97e8c2d1dc1b14cce840158df9.ctex"
+path="res://.godot/imported/TileSelected.png-a6926f21662dedb2085058f6d84288b5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Tiles/TempPuzzlePieceBorder_Selected.png"
-dest_files=["res://.godot/imported/TempPuzzlePieceBorder_Selected.png-7ebc9b97e8c2d1dc1b14cce840158df9.ctex"]
+source_file="res://Assets/Tiles/TileSelected.png"
+dest_files=["res://.godot/imported/TileSelected.png-a6926f21662dedb2085058f6d84288b5.ctex"]
 
 [params]
 

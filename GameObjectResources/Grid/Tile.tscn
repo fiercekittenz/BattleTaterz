@@ -4,7 +4,11 @@
 [ext_resource type="SpriteFrames" uid="uid://qbq6mnkgmutr" path="res://GameObjectResources/Grid/border_default.tres" id="2_3mxlu"]
 
 [node name="Tile" type="Node2D"]
+z_index = 1
+z_as_relative = false
 script = ExtResource("1_7qfsm")
 
 [node name="Border" type="AnimatedSprite2D" parent="."]
+visibility_layer = 3
+z_index = 1
 sprite_frames = ExtResource("2_3mxlu")
