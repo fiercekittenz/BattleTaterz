@@ -103,9 +103,9 @@ namespace BattleTaterz.Core.Utility
                for (int column = 0; column < tileCount; ++column)
                {
                   string gemValue = "*"; // assume null until proven otherwise
-                  if (gameBoard[row, column] != null && gameBoard[row, column].GemRef != null)
+                  if (gameBoard[row, column] != null)
                   {
-                     gemValue = $"{(int)gameBoard[row, column].GemRef.CurrentGem}";
+                     gemValue = $"{(int)gameBoard[row, column].CurrentGemType}";
                   }
 
                   rowText = $"{rowText} {gemValue}";

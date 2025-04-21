@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 namespace BattleTaterz.Core.UI
 {
    /// <summary>
-   /// Events bubbled up from a gem when there is a mouse event.
+   /// Events bubbled up from a tile when there is a mouse event.
    /// </summary>
-   public class GemMouseEventArgs : EventArgs
+   public class TileMouseEventArgs : EventArgs
    {
       public enum MouseEventType
       {

@@ -1,7 +1,9 @@
 using BattleTaterz.Core;
 using BattleTaterz.Core.Enums;
+using BattleTaterz.Core.UI;
 using Godot;
 using System;
+using System.Data.Common;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -12,15 +14,47 @@ public partial class Tile : Node2D
    #region Public Properties
 
    /// <summary>
-   /// Reference to the Gem assigned to this tile.
+   /// Local ref to the game board that owns this tile.
    /// </summary>
-   public Gem GemRef { get; private set; } = null;
+   public GameBoard OwningBoard { get; set; }
 
    /// <summary>
    /// References to the row and column where this tile resides.
    /// </summary>
    public int Row { get; set; } = 0;
    public int Column { get; set; } = 0;
+
+   /// <summary>
+   /// There's no performant way to check if an event handler is set,
+   /// so tracking a boolean value is the safest bet.
+   /// </summary>
+   public bool MouseEventHandlerRegistered { get; set; } = false;
+
+   /// <summary>
+   /// Accessor for the current gem type assigned to this tile.
+   /// </summary>
+   public Gem.GemType CurrentGemType
+   {
+      get
+      {
+         if (_gem != null)
+         {
+            return _gem.CurrentGem;
+         }
+
+         return Gem.GemType.UNKNOWN;
+      }
+   }
+
+   /// <summary>
+   /// Indicates if the tile is available for reuse from the tile pool.
+   /// </summary>
+   public bool IsAvailable { get; private set; } = true;
+
+   /// <summary>
+   /// An event that can be listened to for mouse input to the tile.
+   /// </summary>
+   public event EventHandler<TileMouseEventArgs> OnTileMouseEvent;
 
    #endregion
 
@@ -31,6 +65,13 @@ public partial class Tile : Node2D
    /// </summary>
    public override void _Ready()
    {
+      Hide();
+      _gem = GetNode<Gem>("Gem");
+
+      int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
+      _gem.SetGemType((Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized));
+      _gem.Position = new Godot.Vector2(0, 0);
+      _gem.OnGemMouseEvent += _gem_OnGemMouseEvent;
    }
 
    /// <summary>
@@ -42,17 +83,12 @@ public partial class Tile : Node2D
    }
 
    /// <summary>
-   /// Sets the gem reference property value and moves it into position.
+   /// Updates the gem to use the specified gemtype.
    /// </summary>
-   /// <param name="gem"></param>
-   /// <param name="row"></param>
-   /// <param name="column"></param>
-   /// <param name="tileSize"></param>
-   public void SetGemReference(Gem gem, int row, int column, int tileSize)
+   /// <param name="gemType"></param>
+   public void SetGemType(Gem.GemType gemType)
    {
-      GemRef = gem;
-      AddChild(gem);
-      gem.Position = new Vector2(0, 0);
+      _gem.SetGemType(gemType);
    }
 
    /// <summary>
@@ -64,6 +100,27 @@ public partial class Tile : Node2D
    {
       Row = row;
       Column = column;
+   }
+
+   /// <summary>
+   /// Mark the tile as unavailable for use.
+   /// </summary>
+   public void MarkUnavailable()
+   {
+      IsAvailable = false;
+   }
+
+   /// <summary>
+   /// Clears current gem and coordinate information and sets the tile as available to the tile pool.
+   /// </summary>
+   public void Recycle()
+   {
+      Row = -1;
+      Column = -1;
+      _gem.SetGemType(Gem.GemType.UNKNOWN);
+      IsAvailable = true;
+      GlobalPosition = new Godot.Vector2(-1, -1);
+      Hide();
    }
 
    /// <summary>
@@ -82,7 +139,7 @@ public partial class Tile : Node2D
 
       Row = row;
       Column = column;
-      Godot.Vector2 newPosition = new Godot.Vector2((column * Globals.TileSize) + offset, 
+      Godot.Vector2 newPosition = new Godot.Vector2((column * Globals.TileSize) + offset,
                                                     (row * Globals.TileSize) + offset);
 
       if (shouldAnimate)
@@ -109,6 +166,35 @@ public partial class Tile : Node2D
          Position = newPosition;
       }
    }
+
+   #endregion
+
+   #region Private Methods
+
+   /// <summary>
+   /// Handles mouse events for the attached gem node.
+   /// </summary>
+   /// <param name="sender"></param>
+   /// <param name="e"></param>
+   private void _gem_OnGemMouseEvent(object sender, BattleTaterz.Core.UI.TileMouseEventArgs e)
+   {
+      // Bubble up the mouse event if this tile is active.
+      if (OwningBoard != null &&
+          OwningBoard.IsReady &&
+          !IsAvailable &&
+          Row >= 0 && 
+          Column >= 0 &&
+          CurrentGemType != Gem.GemType.UNKNOWN)
+      {
+         OnTileMouseEvent?.Invoke(this, e);
+      }
+   }
+
+   #endregion
+
+   #region Private Members
+
+   private Gem _gem;
 
    #endregion
 }

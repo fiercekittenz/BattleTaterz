@@ -20,6 +20,11 @@ namespace BattleTaterz.Core
       public static int AnimatedPointPoolSize = 20;
 
       /// <summary>
+      /// The number of tiles to preallocate for reuse.
+      /// </summary>
+      public static int TilePoolSize = 100;
+
+      /// <summary>
       /// The size, in pixels, of the tiles on the board.
       /// </summary>
       public static int TileSize = 70;

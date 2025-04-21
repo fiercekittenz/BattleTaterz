@@ -35,7 +35,13 @@ public partial class Gem : Node2D
    /// <summary>
    /// The current type of gem used by this node.
    /// </summary>
-   public GemType CurrentGem { get; set; } = GemType.PotatoCat;
+   public GemType CurrentGem
+   {
+      get
+      {
+         return _currentGem;
+      }
+   }
 
    /// <summary>
    /// The current state of the gem in gameplay.
@@ -45,7 +51,7 @@ public partial class Gem : Node2D
    /// <summary>
    /// An event that can be listened to for mouse input to the gem.
    /// </summary>
-   public event EventHandler<GemMouseEventArgs> OnGemMouseEvent;
+   public event EventHandler<TileMouseEventArgs> OnGemMouseEvent;
 
    #endregion
 
@@ -57,9 +63,7 @@ public partial class Gem : Node2D
    public override void _Ready()
    {
       _sprite = GetNode<AnimatedSprite2D>("Sprite");
-
-      int currentGemValue = Convert.ToInt32(CurrentGem);
-      _sprite.SpriteFrames = GD.Load<SpriteFrames>($"res://SpriteResources/gem{currentGemValue}.tres");
+      _sprite.Frame = Convert.ToInt32(CurrentGem);
    }
 
    /// <summary>
@@ -71,6 +75,16 @@ public partial class Gem : Node2D
    }
 
    /// <summary>
+   /// Sets the gem type and updates the sprite frame index.
+   /// </summary>
+   /// <param name="gemType"></param>
+   public void SetGemType(GemType gemType)
+   {
+      _currentGem = gemType;
+      _sprite.Frame = Convert.ToInt32(CurrentGem);
+   }
+
+   /// <summary>
    /// Handle mouse input.
    /// </summary>
    /// <param name="node"></param>
@@ -79,12 +93,12 @@ public partial class Gem : Node2D
    protected void OnMouseDetectorInputEvent(Node node, InputEvent eventInfo, int shape)
    {
       if (eventInfo is InputEventMouseButton mouseEvent &&
-          mouseEvent.Pressed && 
+          mouseEvent.Pressed &&
           mouseEvent.ButtonIndex == MouseButton.Left)
-      { 
-         var bubbledArgs = new GemMouseEventArgs()
+      {
+         var bubbledArgs = new TileMouseEventArgs()
          {
-            EventType = GemMouseEventArgs.MouseEventType.Click
+            EventType = TileMouseEventArgs.MouseEventType.Click
          };
 
          OnGemMouseEvent.Invoke(this, bubbledArgs);
@@ -96,9 +110,9 @@ public partial class Gem : Node2D
    /// </summary>
    protected void OnMouseDetectorMouseEntered()
    {
-      var bubbledArgs = new GemMouseEventArgs()
+      var bubbledArgs = new TileMouseEventArgs()
       {
-         EventType = GemMouseEventArgs.MouseEventType.Enter
+         EventType = TileMouseEventArgs.MouseEventType.Enter
       };
 
       OnGemMouseEvent.Invoke(this, bubbledArgs);
@@ -109,9 +123,9 @@ public partial class Gem : Node2D
    /// </summary>
    protected void OnMouseDetectorMouseExited()
    {
-      var bubbledArgs = new GemMouseEventArgs()
+      var bubbledArgs = new TileMouseEventArgs()
       {
-         EventType = GemMouseEventArgs.MouseEventType.Leave
+         EventType = TileMouseEventArgs.MouseEventType.Leave
       };
 
       OnGemMouseEvent.Invoke(this, bubbledArgs);
@@ -122,6 +136,8 @@ public partial class Gem : Node2D
    #region Private Members
 
    private AnimatedSprite2D _sprite;
+
+   private GemType _currentGem;
 
    #endregion
 }

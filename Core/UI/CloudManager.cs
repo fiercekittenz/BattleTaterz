@@ -69,18 +69,19 @@ public partial class CloudManager : Node2D
 
    private void _spawnTimer_Timeout()
    {
-      int spawnChance = Globals.RNGesus.Next(0, 4);
-      if (spawnChance % 3 == 0)
-      {
-         AnimatedCloud cloud = null;
-         while (cloud == null)
-         {
-            cloud = _cloudPool.Where(c => c.IsAvailable).FirstOrDefault();
-            Task.Delay(TimeSpan.FromMilliseconds(1)).Wait(); // just so it doesn't choke the CPU
-         }
+      //TODO re-enable when I have time
+      //int spawnChance = Globals.RNGesus.Next(0, 4);
+      //if (spawnChance % 3 == 0)
+      //{
+      //   AnimatedCloud cloud = null;
+      //   while (cloud == null)
+      //   {
+      //      cloud = _cloudPool.Where(c => c.IsAvailable).FirstOrDefault();
+      //      Task.Delay(TimeSpan.FromMilliseconds(1)).Wait(); // just so it doesn't choke the CPU
+      //   }
 
-         SpawnCloud(cloud);
-      }
+      //   SpawnCloud(cloud);
+      //}
    }
 
    private System.Collections.Generic.List<AnimatedCloud> _cloudPool = new System.Collections.Generic.List<AnimatedCloud>();

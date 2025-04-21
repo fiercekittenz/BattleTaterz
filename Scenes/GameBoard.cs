@@ -33,6 +33,11 @@ public partial class GameBoard : Node2D
    /// </summary>
    public PlayerInfo Player { get; set; }
 
+   /// <summary>
+   /// Denotes if the game board is ready for input from the player or not.
+   /// </summary>
+   public bool IsReady { get; private set; } = false;
+
    #endregion
 
    #region Public Methods
@@ -58,6 +63,9 @@ public partial class GameBoard : Node2D
       // Create the animated points pool.
       _animatedPointsManager = new AnimatedPointsManager(GetNode<Node2D>("AnimatedPointPool"), Globals.AnimatedPointPoolSize);
 
+      // Create the tile pool.
+      _tilePool = new TilePool(this, Globals.TilePoolSize);
+
       // Start game background music.
       var backgroundMusic = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Music_BackgroundMain");
       backgroundMusic?.Play();
@@ -73,7 +81,7 @@ public partial class GameBoard : Node2D
       _moveTimerLabel.Start();
 
       // The game board is now ready for input.
-      _isReady = true;
+      IsReady = true;
    }
 
    /// <summary>
@@ -112,7 +120,7 @@ public partial class GameBoard : Node2D
       {
          for (int column = 0; column < Globals.TileCount; ++column)
          {
-            GenerateTile(row, column);
+            PullTile(row, column);
          }
       }
 
@@ -136,7 +144,7 @@ public partial class GameBoard : Node2D
       // Play a sound to indicate that the board is ready for play.
       // Do not play this at the very beginning of the game, only when the board has been regenerated
       // due to no valid moves.
-      if (_isReady)
+      if (IsReady)
       {
          var boardReadySound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("MainAudio_GameBoardReady");
          boardReadySound?.Play();
@@ -164,13 +172,7 @@ public partial class GameBoard : Node2D
       var tiles = GetChildren().OfType<Tile>().ToList();
       foreach (var tile in tiles)
       {
-         tile.GemRef.OnGemMouseEvent -= Gem_OnGemMouseEvent;
-         if (!tile.IsQueuedForDeletion())
-         {
-            //TODO we need a tile pool
-            RemoveChild(tile);
-            tile.Free();
-         }
+         tile.Recycle();
       }
    }
 
@@ -275,10 +277,10 @@ public partial class GameBoard : Node2D
             Tile currentTile = _gameBoard[row, column];
             if (currentTile != null)
             {
-               MoveDirection possibleDirection = IsPotentialMatch(row, column, currentTile.GemRef.CurrentGem);
+               MoveDirection possibleDirection = IsPotentialMatch(row, column, currentTile.CurrentGemType);
                if (possibleDirection != MoveDirection.NONE)
                {
-                  DebugLogger.Instance.Log($"\tPossible move located at [{row}, {column}] (Direction = {(int)possibleDirection}) (Gem = {(int)currentTile.GemRef.CurrentGem})", LogLevel.Trace);
+                  DebugLogger.Instance.Log($"\tPossible move located at [{row}, {column}] (Direction = {(int)possibleDirection}) (Gem = {(int)currentTile.CurrentGemType})", LogLevel.Trace);
                   possibleMoves.Add(new PotentialMoveInfo(currentTile, row, column, possibleDirection));
                }
             }
@@ -300,7 +302,7 @@ public partial class GameBoard : Node2D
          // Only check this information if we want to log debug info to avoid the additional cycles.
          var primaryCoordinates = GetTileCoordinates(primary);
          var secondaryCoordinates = GetTileCoordinates(secondary);
-         DebugLogger.Instance.Log($"Attempting to swap [{primaryCoordinates.Item1}, {primaryCoordinates.Item2}]({(int)primary.GemRef.CurrentGem}) with [{secondaryCoordinates.Item1}, {secondaryCoordinates.Item2}]({(int)secondary.GemRef.CurrentGem})", LogLevel.Info);
+         DebugLogger.Instance.Log($"Attempting to swap [{primaryCoordinates.Item1}, {primaryCoordinates.Item2}]({(int)primary.CurrentGemType}) with [{secondaryCoordinates.Item1}, {secondaryCoordinates.Item2}]({(int)secondary.CurrentGemType})", LogLevel.Info);
       }
 
       // Cache the game board coordinates and positions of each before swapping.
@@ -459,9 +461,9 @@ public partial class GameBoard : Node2D
       {
          // Look left.
          if (column >= 3 &&
-             _gameBoard[row, column - 1].GemRef.CurrentGem != gemType &&
-             _gameBoard[row, column - 2].GemRef.CurrentGem == gemType &&
-             _gameBoard[row, column - 3].GemRef.CurrentGem == gemType)
+             _gameBoard[row, column - 1].CurrentGemType != gemType &&
+             _gameBoard[row, column - 2].CurrentGemType == gemType &&
+             _gameBoard[row, column - 3].CurrentGemType == gemType)
          {
             DebugLogger.Instance.Log("\tPossible linear slide match to the left.", LogLevel.Trace);
             return MoveDirection.Left;
@@ -469,9 +471,9 @@ public partial class GameBoard : Node2D
 
          // Look right.
          if (column <= Globals.TileCount - 4 &&
-             _gameBoard[row, column + 1].GemRef.CurrentGem != gemType &&
-             _gameBoard[row, column + 2].GemRef.CurrentGem == gemType &&
-             _gameBoard[row, column + 3].GemRef.CurrentGem == gemType)
+             _gameBoard[row, column + 1].CurrentGemType != gemType &&
+             _gameBoard[row, column + 2].CurrentGemType == gemType &&
+             _gameBoard[row, column + 3].CurrentGemType == gemType)
          {
             DebugLogger.Instance.Log("\tPossible linear slide match to the right.", LogLevel.Trace);
             return MoveDirection.Right;
@@ -479,9 +481,9 @@ public partial class GameBoard : Node2D
 
          // Look up.
          if (row >= 3 &&
-             _gameBoard[row - 1, column].GemRef.CurrentGem != gemType &&
-             _gameBoard[row - 2, column].GemRef.CurrentGem == gemType &&
-             _gameBoard[row - 3, column].GemRef.CurrentGem == gemType)
+             _gameBoard[row - 1, column].CurrentGemType != gemType &&
+             _gameBoard[row - 2, column].CurrentGemType == gemType &&
+             _gameBoard[row - 3, column].CurrentGemType == gemType)
          {
             DebugLogger.Instance.Log("\tPossible linear slide match above.", LogLevel.Trace);
             return MoveDirection.Up;
@@ -489,9 +491,9 @@ public partial class GameBoard : Node2D
 
          // Look down.
          if (row <= Globals.TileCount - 4 &&
-             _gameBoard[row + 1, column].GemRef.CurrentGem != gemType &&
-             _gameBoard[row + 2, column].GemRef.CurrentGem == gemType &&
-             _gameBoard[row + 3, column].GemRef.CurrentGem == gemType)
+             _gameBoard[row + 1, column].CurrentGemType != gemType &&
+             _gameBoard[row + 2, column].CurrentGemType == gemType &&
+             _gameBoard[row + 3, column].CurrentGemType == gemType)
          {
             DebugLogger.Instance.Log("\tPossible linear slide match below.", LogLevel.Trace);
             return MoveDirection.Down;
@@ -502,8 +504,8 @@ public partial class GameBoard : Node2D
       {
          // Look left.
          if (column >= 1 && column < Globals.TileCount && row >= 1 && row < Globals.TileCount - 1 &&
-             _gameBoard[row - 1, column - 1].GemRef.CurrentGem == gemType &&
-             _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType)
+             _gameBoard[row - 1, column - 1].CurrentGemType == gemType &&
+             _gameBoard[row + 1, column - 1].CurrentGemType == gemType)
          {
             DebugLogger.Instance.Log("\tPossible wedge slide match to the left.", LogLevel.Trace);
             return MoveDirection.Left;
@@ -511,8 +513,8 @@ public partial class GameBoard : Node2D
 
          // Look right.
          if (column >= 0 && column < Globals.TileCount - 1 && row >= 1 && row < Globals.TileCount - 1 &&
-             _gameBoard[row - 1, column + 1].GemRef.CurrentGem == gemType &&
-             _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
+             _gameBoard[row - 1, column + 1].CurrentGemType == gemType &&
+             _gameBoard[row + 1, column + 1].CurrentGemType == gemType)
          {
             DebugLogger.Instance.Log("\tPossible wedge slide match to the right.", LogLevel.Trace);
             return MoveDirection.Right;
@@ -520,8 +522,8 @@ public partial class GameBoard : Node2D
 
          // Look up.
          if (column >= 1 && column < Globals.TileCount - 1 && row >= 1 && row < Globals.TileCount - 1 &&
-             _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType &&
-             _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
+             _gameBoard[row + 1, column - 1].CurrentGemType == gemType &&
+             _gameBoard[row + 1, column + 1].CurrentGemType == gemType)
          {
             DebugLogger.Instance.Log("\tPossible wedge slide match up.", LogLevel.Trace);
             return MoveDirection.Up;
@@ -529,8 +531,8 @@ public partial class GameBoard : Node2D
 
          // Look down.
          if (column >= 1 && column < Globals.TileCount - 1 && row >= 0 && row < Globals.TileCount - 1 &&
-             _gameBoard[row + 1, column - 1].GemRef.CurrentGem == gemType &&
-             _gameBoard[row + 1, column + 1].GemRef.CurrentGem == gemType)
+             _gameBoard[row + 1, column - 1].CurrentGemType == gemType &&
+             _gameBoard[row + 1, column + 1].CurrentGemType == gemType)
          {
             DebugLogger.Instance.Log("\tPossible wedge slide down.", LogLevel.Trace);
             return MoveDirection.Down;
@@ -557,11 +559,11 @@ public partial class GameBoard : Node2D
          Tile currentTile = _gameBoard[row, column];
          if (currentTile != null)
          {
-            if (currentTile.GemRef.CurrentGem == previousGem || previousGem == Gem.GemType.UNKNOWN)
+            if (currentTile.CurrentGemType == previousGem || previousGem == Gem.GemType.UNKNOWN)
             {
                matches.Add(new MatchedTileInfo(currentTile, row, column));
             }
-            else if (previousGem != Gem.GemType.UNKNOWN && currentTile.GemRef.CurrentGem != previousGem)
+            else if (previousGem != Gem.GemType.UNKNOWN && currentTile.CurrentGemType != previousGem)
             {
                // The current gem doesn't match the previous gem, so we can now examine the match list
                // and bail early with the results.
@@ -588,7 +590,7 @@ public partial class GameBoard : Node2D
                   return false;
                }
 
-               EvaluateTileForMatch(row, nextColumn, currentTile.GemRef.CurrentGem, direction, ref matches);
+               EvaluateTileForMatch(row, nextColumn, currentTile.CurrentGemType, direction, ref matches);
             }
             else if (direction == EvaluationDirection.Vertical)
             {
@@ -605,7 +607,7 @@ public partial class GameBoard : Node2D
                   return false;
                }
 
-               EvaluateTileForMatch(nextRow, column, currentTile.GemRef.CurrentGem, direction, ref matches);
+               EvaluateTileForMatch(nextRow, column, currentTile.CurrentGemType, direction, ref matches);
             }
          }
       }
@@ -623,7 +625,7 @@ public partial class GameBoard : Node2D
       foreach (var match in matches)
       {
          // Update the score and display points gained animation.
-         if (_isReady)
+         if (IsReady)
          {
             var scoreUpdateResults = Score.IncreaseScore(match, level);
             DebugLogger.Instance.Log($"HandleMatches() scoreUpdateResults (BasePoints = {scoreUpdateResults.BasePoints}) (Bonus = {scoreUpdateResults.BonusPointsRewarded})", LogLevel.Info);
@@ -635,23 +637,11 @@ public partial class GameBoard : Node2D
          // Remove the matched tiles from the board.
          foreach (var tile in match.Tiles)
          {
-            DebugLogger.Instance.Log($"HandleMatches() removing [{tile.Row}, {tile.Column}]({(int)tile.TileRef.GemRef.CurrentGem})...", LogLevel.Trace);
+            DebugLogger.Instance.Log($"HandleMatches() recycling [{tile.Row}, {tile.Column}]({(int)tile.TileRef.CurrentGemType})...", LogLevel.Trace);
 
-            // Remove all of the event handlers from the tile and gem before removing from the scene.
-            if (tile.TileRef != null && tile.TileRef.GemRef != null)
-            {
-               DebugLogger.Instance.Log($"\tRemoving OnGemMouseEvent() handler", LogLevel.Trace);
-               tile.TileRef.GemRef.OnGemMouseEvent -= Gem_OnGemMouseEvent;
-            }
-
-            // Remove the tile node from the scene.
-            DebugLogger.Instance.Log($"\tRemoving child from GameBoard node", LogLevel.Trace);
-            if (!tile.TileRef.IsQueuedForDeletion())
-            {
-               //TODO - we need a tile pool
-               RemoveChild(tile.TileRef);
-               tile.TileRef.QueueFree();
-            }
+            // Put the tile back in the pool for availability.
+            DebugLogger.Instance.Log($"\tRecycling tile from GameBoard and flagging as available.", LogLevel.Trace);
+            tile.TileRef.Recycle();
 
             // Remove the tile from the game board grid.
             DebugLogger.Instance.Log($"\tSetting [{tile.Row}, {tile.Column}] to null", LogLevel.Trace);
@@ -680,7 +670,7 @@ public partial class GameBoard : Node2D
       ReplaceRemovedTiles();
 
       // Play an escalating sound chime.
-      if (_isReady)
+      if (IsReady)
       {
          string soundName = $"Sound_MatchHypeLevel{level}";
          var soundToPlay = _gameScene.AudioNode.GetNode<AudioStreamPlayer>(soundName);
@@ -712,14 +702,14 @@ public partial class GameBoard : Node2D
    /// <param name="removePostTween"></param>
    private void RequestTileMove(Tile tile, int row, int column, bool isNew, bool removePostTween)
    {
-      if (_isReady)
+      if (IsReady)
       {
          lock (_movingTilesMutex)
          {
             if (!_movingTiles.Where(t => t.Tile == tile && t.Row == row && t.Column == column).Any())
             {
                _movingTiles.Add(new TileMoveAnimationRequest() { Tile = tile, Row = row, Column = column });
-               tile.MoveTile(this, row, column, isNew, _isReady);
+               tile.MoveTile(this, row, column, isNew, IsReady);
             }
          }
       }
@@ -752,8 +742,8 @@ public partial class GameBoard : Node2D
          if (higherTile != null && currentTile == null)
          {
             // Visually slide this tile down.
-            DebugLogger.Instance.Log($"\t\tMove [{aboveRow}, {column}]({(int)higherTile.GemRef.CurrentGem}) down", LogLevel.Trace);
-            RequestTileMove(higherTile, row, column, false, _isReady);
+            DebugLogger.Instance.Log($"\t\tMove [{aboveRow}, {column}]({(int)higherTile.CurrentGemType}) down", LogLevel.Trace);
+            RequestTileMove(higherTile, row, column, false, IsReady);
             compressed = true;
 
             // Swap the data between grid slots to shift the non-null slot into the null.
@@ -790,7 +780,7 @@ public partial class GameBoard : Node2D
          {
             if (_gameBoard[check, column] != null)
             {
-               DebugLogger.Instance.Log($"\t\tTile at [{check}, {column}]({(int)_gameBoard[check, column].GemRef.CurrentGem}) is not null.", LogLevel.Trace);
+               DebugLogger.Instance.Log($"\t\tTile at [{check}, {column}]({(int)_gameBoard[check, column].CurrentGemType}) is not null.", LogLevel.Trace);
                compressionComplete = false;
             }
          }
@@ -824,10 +814,10 @@ public partial class GameBoard : Node2D
             if (_gameBoard[row, column] == null)
             {
                DebugLogger.Instance.Log($"\tReplacing [{row}, {column}]", LogLevel.Trace);
-               var result = GenerateTile(row, column);
+               var result = PullTile(row, column);
                if (result != null)
                {
-                  DebugLogger.Instance.Log($"\tNew tile generated at [{row}, {column}] with gem {(int)result.GemRef.CurrentGem}", LogLevel.Trace);
+                  DebugLogger.Instance.Log($"\tNew tile pulled and placed at [{row}, {column}] with gem {(int)result.CurrentGemType}", LogLevel.Trace);
                }
             }
          }
@@ -842,26 +832,22 @@ public partial class GameBoard : Node2D
    /// <param name="row"></param>
    /// <param name="column"></param>
    /// <exception cref="Exception"></exception>
-   private Tile GenerateTile(int row, int column)
+   private Tile PullTile(int row, int column)
    {
-      // Create the tile, which will hold the gem.
-      var tile = GD.Load<PackedScene>("res://GameObjectResources/Grid/Tile.tscn").Instantiate<Tile>();
-      if (tile == null)
+      // Get a tile from the pool and move it into position.
+      Tile tile = _tilePool.Pull();
+      if (tile != null)
       {
-         DebugLogger.Instance.Log("Could not instantiate tile.", LogLevel.Info);
-         throw new Exception("Could not instantiate tile.");
-      }
+         if (!tile.MouseEventHandlerRegistered)
+         {
+            tile.OnTileMouseEvent += Tile_OnTileMouseEvent;
+            tile.MouseEventHandlerRegistered = true;
+         }
 
-      AddChild(tile);
-      RequestTileMove(tile, row, column, true, _isReady);
-
-      var gem = GD.Load<PackedScene>("res://GameObjectResources/Grid/Gem.tscn").Instantiate<Gem>();
-      if (gem != null)
-      {
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
-         gem.CurrentGem = (Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized);
-         gem.OnGemMouseEvent += Gem_OnGemMouseEvent;
-         tile.SetGemReference(gem, row, column, Globals.TileSize);
+         tile.SetGemType((Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized));
+         RequestTileMove(tile, row, column, true, IsReady);
+         tile.Show();
       }
 
       _gameBoard[row, column] = tile;
@@ -878,7 +864,7 @@ public partial class GameBoard : Node2D
    /// </summary>
    /// <param name="sender"></param>
    /// <param name="e"></param>
-   private void Gem_OnGemMouseEvent(object sender, GemMouseEventArgs e)
+   private void Tile_OnTileMouseEvent(object sender, TileMouseEventArgs e)
    {
       bool isAnimating = false;
       lock (_movingTilesMutex)
@@ -886,64 +872,63 @@ public partial class GameBoard : Node2D
          isAnimating = _movingTiles.Count() > 0;
       }
 
-      if (!isAnimating && !_isProcessingTurn && sender is Gem gem)
+      if (!isAnimating && !_isProcessingTurn && sender is Tile tile)
       {
-         Tile parentTile = gem.GetParent<Tile>();
-         if (parentTile != null)
+         if (tile != null)
          {
             switch (e.EventType)
             {
-               case GemMouseEventArgs.MouseEventType.Enter:
+               case TileMouseEventArgs.MouseEventType.Enter:
                   {
-                     if (parentTile != _primarySelection && parentTile != _secondarySelection)
+                     if (tile != _primarySelection && tile != _secondarySelection)
                      {
-                        var border = parentTile.GetNode<AnimatedSprite2D>("Border");
+                        var border = tile.GetNode<AnimatedSprite2D>("Border");
                         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_hover.tres");
                      }
                   }
                   break;
-               case GemMouseEventArgs.MouseEventType.Leave:
+               case TileMouseEventArgs.MouseEventType.Leave:
                   {
-                     if (parentTile != _primarySelection && parentTile != _secondarySelection)
+                     if (tile != _primarySelection && tile != _secondarySelection)
                      {
-                        var border = parentTile.GetNode<AnimatedSprite2D>("Border");
+                        var border = tile.GetNode<AnimatedSprite2D>("Border");
                         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
                      }
                   }
                   break;
-               case GemMouseEventArgs.MouseEventType.Click:
+               case TileMouseEventArgs.MouseEventType.Click:
                   {
                      bool selectionMade = false;
                      AudioStreamPlayer selectionSound = null;
 
-                     if (_primarySelection == null && parentTile != _primarySelection)
+                     if (_primarySelection == null && tile != _primarySelection)
                      {
-                        _primarySelection = parentTile;
+                        _primarySelection = tile;
                         selectionMade = true;
                         selectionSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Sound_SelectPrimary");
 
                         if (DebugLogger.Instance.Enabled)
                         {
                            var coordinates = GetTileCoordinates(_primarySelection);
-                           DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() first selection [{coordinates.Item1}, {coordinates.Item2}]({(int)_primarySelection.GemRef.CurrentGem})", LogLevel.Trace);
+                           DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() first selection [{coordinates.Item1}, {coordinates.Item2}]({(int)_primarySelection.CurrentGemType})", LogLevel.Trace);
                         }
                      }
-                     else if (_secondarySelection == null && parentTile != _secondarySelection)
+                     else if (_secondarySelection == null && tile != _secondarySelection)
                      {
-                        _secondarySelection = parentTile;
+                        _secondarySelection = tile;
                         selectionMade = true;
                         selectionSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Sound_SelectSecondary");
 
                         if (DebugLogger.Instance.Enabled)
                         {
                            var coordinates = GetTileCoordinates(_secondarySelection);
-                           DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() second selection [{coordinates.Item1}, {coordinates.Item2}]({(int)_secondarySelection.GemRef.CurrentGem})", LogLevel.Trace);
+                           DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() second selection [{coordinates.Item1}, {coordinates.Item2}]({(int)_secondarySelection.CurrentGemType})", LogLevel.Trace);
                         }
                      }
 
                      if (selectionMade)
                      {
-                        var border = parentTile.GetNode<AnimatedSprite2D>("Border");
+                        var border = tile.GetNode<AnimatedSprite2D>("Border");
                         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_selected.tres");
 
                         selectionSound.Play();
@@ -1019,6 +1004,9 @@ public partial class GameBoard : Node2D
    // Manager for this game board's animated points pool.
    private AnimatedPointsManager _animatedPointsManager = null;
 
+   // Manager for a pool of avaialble tile objects.
+   private TilePool _tilePool = null;
+
    // Cache a ref to the parent game scene.
    private GameScene _gameScene = null;
 
@@ -1037,10 +1025,6 @@ public partial class GameBoard : Node2D
 
    // Reference to the object that handles the move timer.
    private MoveTimerLabel _moveTimerLabel;
-
-   // Boolean flag to indicate the board is ready for player input.
-   // Primarily used to block generation sounds at start-up.
-   private bool _isReady = false;
 
    // Flag indicating if the game is busy working on a turn.
    private bool _isProcessingTurn = false;
