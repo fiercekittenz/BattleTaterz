@@ -167,6 +167,7 @@ public partial class GameBoard : Node2D
          tile.GemRef.OnGemMouseEvent -= Gem_OnGemMouseEvent;
          if (!tile.IsQueuedForDeletion())
          {
+            //TODO we need a tile pool
             RemoveChild(tile);
             tile.Free();
          }
@@ -647,6 +648,7 @@ public partial class GameBoard : Node2D
             DebugLogger.Instance.Log($"\tRemoving child from GameBoard node", LogLevel.Trace);
             if (!tile.TileRef.IsQueuedForDeletion())
             {
+               //TODO - we need a tile pool
                RemoveChild(tile.TileRef);
                tile.TileRef.QueueFree();
             }
