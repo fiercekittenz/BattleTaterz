@@ -96,7 +96,9 @@ public partial class Tile : Node2D
 
          var tween = GetTree().CreateTween();
          tween.SetParallel(true);
-         tween.TweenProperty(this, "position", newPosition, 0.2f).SetEase(Tween.EaseType.In);
+         tween.TweenProperty(this, "position", newPosition, 0.3f).SetEase(Tween.EaseType.In);
+         tween.TweenProperty(this, "position", new Godot.Vector2(newPosition.X, newPosition.Y - 20), 0.15f).SetEase(Tween.EaseType.Out);
+         tween.TweenProperty(this, "position", newPosition, 0.1f).SetEase(Tween.EaseType.In);
          tween.Finished += (() =>
          {
             // Clean up and let the GameBoard know that this tile is done animating.

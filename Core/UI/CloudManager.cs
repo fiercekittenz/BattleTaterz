@@ -76,7 +76,7 @@ public partial class CloudManager : Node2D
          while (cloud == null)
          {
             cloud = _cloudPool.Where(c => c.IsAvailable).FirstOrDefault();
-            _ = Task.Delay(TimeSpan.FromMilliseconds(1)); // just so it doesn't choke the CPU
+            Task.Delay(TimeSpan.FromMilliseconds(1)).Wait(); // just so it doesn't choke the CPU
          }
 
          SpawnCloud(cloud);

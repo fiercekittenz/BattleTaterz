@@ -149,9 +149,7 @@ public partial class GameBoard : Node2D
    public void Relocate(float x, float y)
    {
       Godot.Vector2 newPosition = new Godot.Vector2(x, y);
-
-      GlobalPosition = newPosition;      
-      //GetNode<VBoxContainer>("UI").GlobalPosition = newPosition;
+      GlobalPosition = newPosition;
    }
 
    /// <summary>
@@ -170,7 +168,7 @@ public partial class GameBoard : Node2D
          if (!tile.IsQueuedForDeletion())
          {
             RemoveChild(tile);
-            tile.QueueFree();
+            tile.Free();
          }
       }
    }
@@ -346,6 +344,10 @@ public partial class GameBoard : Node2D
 
          var badMoveSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Sound_BadMove");
          badMoveSound?.Play();
+
+         // No swap, so no moves to animate. Turn input back on.
+         DebugLogger.Instance.Log("Bad swap, so re-enabling input!", LogLevel.Info);
+         SetProcessInput(true);
       }
 
       // Clear any selections.
@@ -626,7 +628,7 @@ public partial class GameBoard : Node2D
             DebugLogger.Instance.Log($"HandleMatches() scoreUpdateResults (BasePoints = {scoreUpdateResults.BasePoints}) (Bonus = {scoreUpdateResults.BonusPointsRewarded})", LogLevel.Info);
 
             _animatedPointsManager.Play(match.GlobalPositionAverage, scoreUpdateResults);
-            _uiNode.GetNode<Godot.Label>("Labels/ScoreValueLabel").Text = scoreUpdateResults.UpdatedScore.ToString();
+            _uiNode.GetNode<Godot.Label>("Labels/ScoreValueLabel").Text = scoreUpdateResults.UpdatedScore.ToString("N0");
          }
 
          // Remove the matched tiles from the board.
@@ -693,7 +695,7 @@ public partial class GameBoard : Node2D
             level = 0;
          }
 
-         Task.Delay(TimeSpan.FromMilliseconds(500));
+         //TODO: Not sure this is necessary - Task.Delay(TimeSpan.FromMilliseconds(100)).Wait();
          HandleMatches(newMatches, level + 1);
       }
    }
