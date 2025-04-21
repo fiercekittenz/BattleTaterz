@@ -39,12 +39,14 @@ layout_mode = 2
 [node name="ScoreLabel" type="Label" parent="UI/Labels"]
 layout_mode = 2
 theme = ExtResource("3_fkmb8")
+theme_override_font_sizes/font_size = 54
 text = "Score: "
 
 [node name="ScoreValueLabel" type="Label" parent="UI/Labels"]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme = ExtResource("3_fkmb8")
+theme_override_font_sizes/font_size = 54
 text = "0"
 
 [node name="MoveTimerLabela" type="Label" parent="UI/Labels"]
@@ -61,6 +63,7 @@ custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("3_fkmb8")
+theme_override_font_sizes/font_size = 54
 text = "0:00s"
 horizontal_alignment = 2
 script = ExtResource("3_y2qi3")

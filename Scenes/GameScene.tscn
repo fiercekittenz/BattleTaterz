@@ -4,7 +4,6 @@
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
 [ext_resource type="Script" uid="uid://d3h37vriq1afw" path="res://Core/UI/CloudManager.cs" id="3_pgw7i"]
 [ext_resource type="Theme" uid="uid://uy7p5q4ssdwt" path="res://UIResources/ui_theme.tres" id="4_wukv0"]
-[ext_resource type="FontFile" uid="uid://cbwdkgmajnr1m" path="res://Assets/Fonts/Boogaloo-Regular.ttf" id="5_hgvmy"]
 [ext_resource type="Script" uid="uid://crw08tcl2sd8q" path="res://Scenes/MasterVolumeSlider.cs" id="6_ebcm8"]
 [ext_resource type="AudioStream" uid="uid://bhl3om8fj2s8w" path="res://Assets/Audio/Compress.wav" id="7_4v654"]
 [ext_resource type="AudioStream" uid="uid://3fuxn25gf21n" path="res://Assets/Audio/SelectPrimaryGem.mp3" id="8_leul7"]
@@ -20,6 +19,7 @@
 [ext_resource type="AudioStream" uid="uid://3046vu847x7g" path="res://Assets/Audio/Drop1.mp3" id="17_rsfko"]
 [ext_resource type="AudioStream" uid="uid://djw1cxgth0vv0" path="res://Assets/Audio/Drop2.mp3" id="18_82uqo"]
 [ext_resource type="AudioStream" uid="uid://crjywsuc7w7tw" path="res://Assets/Audio/Background_Main.mp3" id="19_bl770"]
+[ext_resource type="FontFile" uid="uid://c07nhox84jqrv" path="res://Assets/Fonts/Gelato.otf" id="19_v7xhk"]
 [ext_resource type="SpriteFrames" uid="uid://dsvk6eq5isuke" path="res://SpriteResources/logo.tres" id="21_v7xhk"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fevyy"]
@@ -164,14 +164,14 @@ offset_bottom = 40.0
 top_level = true
 layout_mode = 0
 offset_left = 1589.0
-offset_top = -2.0
+offset_top = 1.0
 offset_right = 1717.0
-offset_bottom = 41.0
+offset_bottom = 45.0
 theme = ExtResource("4_wukv0")
 theme_override_colors/font_outline_color = Color(0.301961, 0, 0.486275, 1)
 theme_override_constants/outline_size = 6
-theme_override_fonts/font = ExtResource("5_hgvmy")
-theme_override_font_sizes/font_size = 36
+theme_override_fonts/font = ExtResource("19_v7xhk")
+theme_override_font_sizes/font_size = 48
 text = "Volume"
 
 [node name="MasterVolumeSlider" type="HSlider" parent="UI/Control"]
