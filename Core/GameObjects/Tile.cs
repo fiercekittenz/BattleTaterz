@@ -1,5 +1,6 @@
 using BattleTaterz.Core;
 using BattleTaterz.Core.Enums;
+using BattleTaterz.Core.Gameplay;
 using BattleTaterz.Core.UI;
 using BattleTaterz.Core.Utility;
 using Godot;
@@ -142,17 +143,19 @@ public partial class Tile : Node2D
    /// <summary>
    /// Places the tile above the column where it will drop in from.
    /// </summary>
-   /// <param name="column"></param>
-   public void PrepareForDrop(int column)
+   /// <param name="gameBoard"></param>
+   /// <param name="request"></param>
+   public void PrepareForDrop(GameBoard gameBoard, TileMoveRequest request)
    {
       // This is a freshly generated tile. It won't have a position yet, so the
       // start position needs to be above the column it'll drop from.
       Hide();
       Modulate = new Godot.Color(Modulate.R, Modulate.G, Modulate.B, 0.0f);
-      Position = new Godot.Vector2((column * Globals.TileSize) + Globals.TileGridOffset, (Globals.TileSize + Globals.TileGridOffset) * -1);
-      _wasPreparedFromPull = true;
+      Position = new Godot.Vector2((request.Column * Globals.TileSize) + Globals.TileGridOffset, (Globals.TileSize + Globals.TileGridOffset) * -1);
 
-      DebugLogger.Instance.Log($"\t{Name} is freshly positioned above column {column} for drop: {Position.ToString()}", LogLevel.Trace);
+      DebugLogger.Instance.Log($"\t{Name} is freshly positioned above column {request.Column} for drop: {Position.ToString()}", LogLevel.Trace);
+
+      gameBoard.HandleTileMoveAnimationFinished(request);
    }
 
    /// <summary>
@@ -161,27 +164,24 @@ public partial class Tile : Node2D
    /// it is possible for the Tile to be removed from the tree while animating.
    /// </summary>
    /// <param name="gameBoard"></param>
-   /// <param name="row"></param>
-   /// <param name="column"></param>
-   /// <param name="shouldAnimate"></param>
-   public void MoveTile(GameBoard gameBoard, int row, int column, bool shouldAnimate)
+   public void MoveTile(GameBoard gameBoard, TileMoveRequest request)
    {
-      DebugLogger.Instance.Log($"{Name} move from [{Row}, {Column}] to [{row}, {column}] begin...", LogLevel.Trace);
+      DebugLogger.Instance.Log($"{Name} move from [{Row}, {Column}] to [{request.Row}, {request.Column}] begin...", LogLevel.Trace);
 
-      Row = row;
-      Column = column;
-      Godot.Vector2 newPosition = new Godot.Vector2((column * Globals.TileSize) + Globals.TileGridOffset,
-                                                    (row * Globals.TileSize) + Globals.TileGridOffset);
+      Row = request.Row;
+      Column = request.Column;
+      Godot.Vector2 newPosition = new Godot.Vector2((request.Column * Globals.TileSize) + Globals.TileGridOffset,
+                                                    (request.Row * Globals.TileSize) + Globals.TileGridOffset);
 
       DebugLogger.Instance.Log($"\t{Name} new position = {newPosition.ToString()}", LogLevel.Trace);
 
-      if (shouldAnimate)
+      if (request.Type == TileMoveRequest.MoveType.Animated)
       {
          IsAnimating = true;
 
          DebugLogger.Instance.Log($"\t{Name} animate moving from ({Position.ToString()}) to ({newPosition.ToString()}).", LogLevel.Trace);
 
-         if (_wasPreparedFromPull)
+         if (!Visible)
          {
             Show();
          }
@@ -204,10 +204,9 @@ public partial class Tile : Node2D
             // Clean up and let the GameBoard know that this tile is done animating.
             tween.Kill();
 
-            DebugLogger.Instance.Log($"\t{Name} finished animating ({row}, {column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
+            DebugLogger.Instance.Log($"\t{Name} finished animating ({Row}, {Column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
 
-            IsAnimating = false;
-            gameBoard.HandleTileMoveAnimationFinished(this, row, column);
+            gameBoard.HandleTileMoveAnimationFinished(request);
          });
       }
       else
@@ -215,6 +214,8 @@ public partial class Tile : Node2D
          DebugLogger.Instance.Log($"\t{Name} just set position from ({Position.ToString()}) to ({newPosition.ToString()}).", LogLevel.Trace);
          Position = newPosition;
          Show();
+
+         gameBoard.HandleTileMoveAnimationFinished(request);
       }
    }
 

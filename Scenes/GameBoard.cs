@@ -97,15 +97,24 @@ public partial class GameBoard : Node2D
    /// <param name="delta"></param>
    public override void _Process(double delta)
    {
+      // Take care of animating tiles on frame ticks.
       if (State == GameBoardState.AnimatingMoveResults)
       {
          lock (_movingTilesMutex)
          {
-            //TileMoveAnimationRequest tileMoveRequest = _movingTiles.Where(t => !t.Tile.IsAnimating).FirstOrDefault();
-            if (_moveRequests.TryDequeue(out TileMoveAnimationRequest request))
+            if (_moveRequests.TryDequeue(out TileMoveRequest request))
             {
                _movingTiles.Add(request);
-               request.Tile.MoveTile(this, request.Row, request.Column, true);
+
+               if (request.Type == TileMoveRequest.MoveType.Static)
+               {
+                  // If this is a static move, it's meant to prepare the tile for dropping.
+                  request.Tile.PrepareForDrop(this, request);
+               }
+               else
+               {
+                  request.Tile.MoveTile(this, request);
+               }
             }
          }
       }
@@ -387,25 +396,26 @@ public partial class GameBoard : Node2D
    /// If all moves are finished and the list is empty, restore processing input
    /// to the gameboard.
    /// </summary>
-   /// <param name="tile"></param>
-   /// <param name="row"></param>
-   /// <param name="column"></param>
-   public void HandleTileMoveAnimationFinished(Tile tile, int row, int column)
+   /// <param name="fulfilledRequest"></param>
+   public void HandleTileMoveAnimationFinished(TileMoveRequest fulfilledRequest)
    {
-      DebugLogger.Instance.Log($"\t{tile.Name} finished move.", LogLevel.Info);
+      DebugLogger.Instance.Log($"\t{fulfilledRequest.Tile.Name} finished move.", LogLevel.Info);
 
       lock (_movingTilesMutex)
       {
-         TileMoveAnimationRequest request = _movingTiles.Where(t => t.Tile == tile && t.Row == row && t.Column == column).First();
-         if (request != null)
+         if (_movingTiles.Any())
          {
-            DebugLogger.Instance.Log($"Tile [{row}, {column}] has finished animating. Remove from the list!", LogLevel.Trace);
-            _movingTiles.Remove(request);
-         }
+            TileMoveRequest request = _movingTiles.Where(r => r == fulfilledRequest).First();
+            if (request != null)
+            {
+               DebugLogger.Instance.Log($"Tile [{fulfilledRequest.Row}, {fulfilledRequest.Column}] has finished animating. Remove from the list!", LogLevel.Trace);
+               _movingTiles.Remove(request);
+            }
 
-         if (_movingTiles.Count == 0 && _moveRequests.IsEmpty && State == GameBoardState.AnimatingMoveResults)
-         {
-            EndTurn();
+            if (_movingTiles.Count == 0 && _moveRequests.IsEmpty && State == GameBoardState.AnimatingMoveResults)
+            {
+               EndTurn();
+            }
          }
       }
    }
@@ -731,19 +741,40 @@ public partial class GameBoard : Node2D
    {
       if (State == GameBoardState.ProcessingTurn)
       {
+         TileMoveRequest moveRequest = new TileMoveRequest()
+         {
+            Tile = tile,
+            Row = row,
+            Column = column,
+            Type = TileMoveRequest.MoveType.Animated
+         };
+
          if (freshPull)
          {
             // This is a fresh pull. Move the tile into a droppable position first.
-            tile.PrepareForDrop(column);
+            DebugLogger.Instance.Log($"RequestTileMove() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Type: Static", LogLevel.Trace);
+
+            TileMoveRequest prepareRequest = new TileMoveRequest()
+            {
+               Tile = tile,
+               Row = row,
+               Column = column,
+               Type = TileMoveRequest.MoveType.Static
+            };
+
+            _moveRequests.Enqueue(prepareRequest); 
+            _moveRequests.Enqueue(moveRequest);
+            //TODO tile.PrepareForDrop(column);
          }
-
-         DebugLogger.Instance.Log($"RequestTileMove() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]", LogLevel.Trace);
-
-         _moveRequests.Enqueue(new TileMoveAnimationRequest() { Tile = tile, Row = row, Column = column });
+         else
+         {
+            DebugLogger.Instance.Log($"RequestTileMove() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Type: Animated", LogLevel.Trace);
+            _moveRequests.Enqueue(moveRequest);
+         }
       }
       else
       {
-         tile.MoveTile(this, row, column, false);
+         tile.MoveTile(this, new TileMoveRequest(){ Tile = tile, Row = row, Column = column, Type = TileMoveRequest.MoveType.Static });
       }
    }
 
@@ -845,7 +876,7 @@ public partial class GameBoard : Node2D
                var result = PullTile(row, column);
                if (result != null)
                {
-                  result.Show();
+                  //result.Show();
                   DebugLogger.Instance.Log($"\tNew tile pulled and placed at [{row}, {column}] with gem {(int)result.CurrentGemType}", LogLevel.Info);
                }
             }
@@ -1030,8 +1061,8 @@ public partial class GameBoard : Node2D
    // they are removed from the list. If all tiles are removed, that is when
    // the game board can process input again.
    private object _movingTilesMutex = new object();
-   private List<TileMoveAnimationRequest> _movingTiles = new List<TileMoveAnimationRequest>();
-   private ConcurrentQueue<TileMoveAnimationRequest> _moveRequests = new ConcurrentQueue<TileMoveAnimationRequest>();
+   private List<TileMoveRequest> _movingTiles = new List<TileMoveRequest>();
+   private ConcurrentQueue<TileMoveRequest> _moveRequests = new ConcurrentQueue<TileMoveRequest>();
 
    // Manager for this game board's animated points pool.
    private AnimatedPointsManager _animatedPointsManager = null;
