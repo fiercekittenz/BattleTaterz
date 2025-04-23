@@ -1,6 +1,7 @@
 using BattleTaterz.Core;
 using BattleTaterz.Core.Enums;
 using BattleTaterz.Core.UI;
+using BattleTaterz.Core.Utility;
 using Godot;
 using System;
 using System.Data.Common;
@@ -52,6 +53,11 @@ public partial class Tile : Node2D
    public bool IsAvailable { get; private set; } = true;
 
    /// <summary>
+   /// Indicates if the tile is currently animating in a drop or not.
+   /// </summary>
+   public bool IsAnimating { get; private set; } = false;
+
+   /// <summary>
    /// An event that can be listened to for mouse input to the tile.
    /// </summary>
    public event EventHandler<TileMouseEventArgs> OnTileMouseEvent;
@@ -88,6 +94,8 @@ public partial class Tile : Node2D
    /// <param name="gemType"></param>
    public void SetGemType(Gem.GemType gemType)
    {
+      DebugLogger.Instance.Log($"{Name} changing gem type from [{(int)CurrentGemType}] to [{(int)gemType}].", LogLevel.Trace);
+
       _gem.SetGemType(gemType);
    }
 
@@ -98,6 +106,8 @@ public partial class Tile : Node2D
    /// <param name="column"></param>
    public void UpdateCoordinates(int row, int column)
    {
+      DebugLogger.Instance.Log($"{Name} updating coordinates from [{Row}, {Column}] to [{row}, {column}].", LogLevel.Trace);
+
       Row = row;
       Column = column;
    }
@@ -107,6 +117,8 @@ public partial class Tile : Node2D
    /// </summary>
    public void MarkUnavailable()
    {
+      DebugLogger.Instance.Log($"{Name} unavailable.", LogLevel.Trace);
+
       IsAvailable = false;
    }
 
@@ -115,12 +127,32 @@ public partial class Tile : Node2D
    /// </summary>
    public void Recycle()
    {
+      DebugLogger.Instance.Log($"{Name} recycling. (row = {Row}, column = {Column}, gemType == {(int)CurrentGemType}", LogLevel.Trace);
+
+      Hide();
+
       Row = -1;
       Column = -1;
+      GlobalPosition = new Godot.Vector2(-1 * Globals.TileSize, -1 * Globals.TileSize);
       _gem.SetGemType(Gem.GemType.UNKNOWN);
+      _wasPreparedFromPull = false;
       IsAvailable = true;
-      GlobalPosition = new Godot.Vector2(-1, -1);
+   }
+
+   /// <summary>
+   /// Places the tile above the column where it will drop in from.
+   /// </summary>
+   /// <param name="column"></param>
+   public void PrepareForDrop(int column)
+   {
+      // This is a freshly generated tile. It won't have a position yet, so the
+      // start position needs to be above the column it'll drop from.
       Hide();
+      Modulate = new Godot.Color(Modulate.R, Modulate.G, Modulate.B, 0.0f);
+      Position = new Godot.Vector2((column * Globals.TileSize) + Globals.TileGridOffset, (Globals.TileSize + Globals.TileGridOffset) * -1);
+      _wasPreparedFromPull = true;
+
+      DebugLogger.Instance.Log($"\t{Name} is freshly positioned above column {column} for drop: {Position.ToString()}", LogLevel.Trace);
    }
 
    /// <summary>
@@ -128,42 +160,61 @@ public partial class Tile : Node2D
    /// Provide the GameBoard parent node as a parameter to the method, because
    /// it is possible for the Tile to be removed from the tree while animating.
    /// </summary>
-   /// <param name="parent"></param>
+   /// <param name="gameBoard"></param>
    /// <param name="row"></param>
    /// <param name="column"></param>
-   /// <param name="isNew"></param>
    /// <param name="shouldAnimate"></param>
-   public void MoveTile(GameBoard parent, int row, int column, bool isNew, bool shouldAnimate)
+   public void MoveTile(GameBoard gameBoard, int row, int column, bool shouldAnimate)
    {
-      float offset = (Globals.TileSize / 2) + 10;
+      DebugLogger.Instance.Log($"{Name} move from [{Row}, {Column}] to [{row}, {column}] begin...", LogLevel.Trace);
 
       Row = row;
       Column = column;
-      Godot.Vector2 newPosition = new Godot.Vector2((column * Globals.TileSize) + offset,
-                                                    (row * Globals.TileSize) + offset);
+      Godot.Vector2 newPosition = new Godot.Vector2((column * Globals.TileSize) + Globals.TileGridOffset,
+                                                    (row * Globals.TileSize) + Globals.TileGridOffset);
+
+      DebugLogger.Instance.Log($"\t{Name} new position = {newPosition.ToString()}", LogLevel.Trace);
 
       if (shouldAnimate)
       {
-         if (isNew)
+         IsAnimating = true;
+
+         DebugLogger.Instance.Log($"\t{Name} animate moving from ({Position.ToString()}) to ({newPosition.ToString()}).", LogLevel.Trace);
+
+         if (_wasPreparedFromPull)
          {
-            // This is a freshly generated tile. It won't have a position yet, so the
-            // start position needs to be above the column it'll drop from.
-            Position = new Godot.Vector2((column * Globals.TileSize) + offset, (Globals.TileSize + offset) * -1);
+            Show();
          }
 
          var tween = GetTree().CreateTween();
+         tween.SetProcessMode(Tween.TweenProcessMode.Physics);
          tween.SetParallel(true);
-         tween.TweenProperty(this, "position", newPosition, 0.4f).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Spring);
+         tween.TweenProperty(this, "modulate:a", 1.0f, 0.1f).SetEase(Tween.EaseType.In);
+         tween.TweenProperty(this, "position", newPosition, 0.4f).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Spring).From(Position);
+
+         if (Globals.RNGesus.Next(0, 10) % 3 == 0)
+         {
+            int dropSoundId = Globals.RNGesus.Next(1, 3);
+            var dropSound = gameBoard.GetParent<GameScene>().AudioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
+            dropSound?.Play();
+         }
+
          tween.Finished += (() =>
          {
             // Clean up and let the GameBoard know that this tile is done animating.
             tween.Kill();
-            parent.HandleTileMoveAnimationFinished(this, row, column);
+
+            DebugLogger.Instance.Log($"\t{Name} finished animating ({row}, {column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
+
+            IsAnimating = false;
+            gameBoard.HandleTileMoveAnimationFinished(this, row, column);
          });
       }
       else
       {
+         DebugLogger.Instance.Log($"\t{Name} just set position from ({Position.ToString()}) to ({newPosition.ToString()}).", LogLevel.Trace);
          Position = newPosition;
+         Show();
       }
    }
 
@@ -179,12 +230,7 @@ public partial class Tile : Node2D
    private void _gem_OnGemMouseEvent(object sender, BattleTaterz.Core.UI.TileMouseEventArgs e)
    {
       // Bubble up the mouse event if this tile is active.
-      if (OwningBoard != null &&
-          OwningBoard.IsReady &&
-          !IsAvailable &&
-          Row >= 0 && 
-          Column >= 0 &&
-          CurrentGemType != Gem.GemType.UNKNOWN)
+      if (OwningBoard != null && OwningBoard.IsReady && CurrentGemType != Gem.GemType.UNKNOWN)
       {
          OnTileMouseEvent?.Invoke(this, e);
       }
@@ -195,6 +241,12 @@ public partial class Tile : Node2D
    #region Private Members
 
    private Gem _gem;
+
+   /// <summary>
+   /// Denotes if the tile was prepared from a fresh pull. This means the tile has been
+   /// hidden and moved into position above its column for a drop.
+   /// </summary>
+   private bool _wasPreparedFromPull = false;
 
    #endregion
 }

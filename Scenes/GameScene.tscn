@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://dwq1urk6jpoqr"]
+[gd_scene load_steps=26 format=3 uid="uid://dwq1urk6jpoqr"]
 
 [ext_resource type="Script" uid="uid://bb68lhat8iyfp" path="res://Scenes/GameScene.cs" id="1_gipt1"]
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
@@ -13,14 +13,15 @@
 [ext_resource type="AudioStream" uid="uid://dan6nslgd180r" path="res://Assets/Audio/MatchHypeLevel1.ogg" id="12_lko2l"]
 [ext_resource type="AudioStream" uid="uid://j7v0wy6hu2uf" path="res://Assets/Audio/MatchHypeLevel2.ogg" id="13_em6uu"]
 [ext_resource type="AudioStream" uid="uid://joxuek3ba8xs" path="res://Assets/Audio/MatchHypeLevel3.ogg" id="14_odb6r"]
-[ext_resource type="AudioStream" uid="uid://dqkaue4sfte77" path="res://Assets/Audio/Background.wav" id="15_p4lnl"]
 [ext_resource type="AudioStream" uid="uid://c6u33jkgcesxi" path="res://Assets/Audio/SelectSecondaryGem.mp3" id="16_6gwdq"]
 [ext_resource type="AudioStream" uid="uid://mryyvilonf6j" path="res://Assets/Audio/TimerFast.mp3" id="16_gipt1"]
 [ext_resource type="AudioStream" uid="uid://3046vu847x7g" path="res://Assets/Audio/Drop1.mp3" id="17_rsfko"]
+[ext_resource type="AudioStream" uid="uid://c4pg7r4edl6vl" path="res://Assets/Audio/BattleTaterz_CG.mp3" id="17_v7xhk"]
 [ext_resource type="AudioStream" uid="uid://djw1cxgth0vv0" path="res://Assets/Audio/Drop2.mp3" id="18_82uqo"]
 [ext_resource type="AudioStream" uid="uid://crjywsuc7w7tw" path="res://Assets/Audio/Background_Main.mp3" id="19_bl770"]
 [ext_resource type="FontFile" uid="uid://c07nhox84jqrv" path="res://Assets/Fonts/Gelato.otf" id="19_v7xhk"]
 [ext_resource type="SpriteFrames" uid="uid://dsvk6eq5isuke" path="res://SpriteResources/logo.tres" id="21_v7xhk"]
+[ext_resource type="Script" uid="uid://dvn8px26j3261" path="res://Core/Gameplay/TilePool.cs" id="22_wukv0"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fevyy"]
 bg_color = Color(0.687731, 0.611753, 0.90921, 1)
@@ -118,11 +119,6 @@ stream = ExtResource("14_odb6r")
 volume_db = -30.0
 bus = &"sfx"
 
-[node name="MainAudio_BackgroundMusic" type="AudioStreamPlayer" parent="Audio"]
-stream = ExtResource("15_p4lnl")
-volume_db = -30.0
-bus = &"music"
-
 [node name="Sound_SelectSecondary" type="AudioStreamPlayer" parent="Audio"]
 stream = ExtResource("16_6gwdq")
 volume_db = -30.0
@@ -147,6 +143,11 @@ parameters/looping = true
 [node name="Sound_TimerFast" type="AudioStreamPlayer" parent="Audio"]
 stream = ExtResource("16_gipt1")
 volume_db = -15.0
+
+[node name="Music_BackgroundCG" type="AudioStreamPlayer" parent="Audio"]
+stream = ExtResource("17_v7xhk")
+volume_db = -15.0
+parameters/looping = true
 
 [node name="UI" type="Control" parent="."]
 top_level = true
@@ -194,3 +195,8 @@ AudioBusName = "Master"
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="UI"]
 position = Vector2(203, 107)
 sprite_frames = ExtResource("21_v7xhk")
+
+[node name="TilePool" type="Node2D" parent="."]
+z_index = 1
+z_as_relative = false
+script = ExtResource("22_wukv0")

@@ -14,6 +14,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static System.Net.WebRequestMethods;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 /// <summary>
@@ -38,6 +39,11 @@ public partial class GameBoard : Node2D
    /// </summary>
    public bool IsReady { get; private set; } = false;
 
+   /// <summary>
+   /// State of the game board used to determine behavior on frame ticks.
+   /// </summary>
+   public GameBoardState State { get; private set; } = GameBoardState.Initializing;
+
    #endregion
 
    #region Public Methods
@@ -53,6 +59,10 @@ public partial class GameBoard : Node2D
       _gameScene = GetParent<GameScene>();
       _uiNode = GetNode<VBoxContainer>("UI");
 
+      // Initialize the tile pool.
+      _tilePool = GetNode<TilePool>("TilePool");
+      _tilePool.Initialize();
+
       // Setup the timer.
       _moveTimerLabel = _uiNode.GetNode<MoveTimerLabel>("Labels/MoveTimerLabel");
       _moveTimerLabel.OnTimerFinished += _moveTimerLabel_OnTimerFinished;
@@ -62,13 +72,6 @@ public partial class GameBoard : Node2D
 
       // Create the animated points pool.
       _animatedPointsManager = new AnimatedPointsManager(GetNode<Node2D>("AnimatedPointPool"), Globals.AnimatedPointPoolSize);
-
-      // Create the tile pool.
-      _tilePool = new TilePool(this, Globals.TilePoolSize);
-
-      // Start game background music.
-      var backgroundMusic = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Music_BackgroundMain");
-      backgroundMusic?.Play();
 
       // Generate the initial board.
       DebugLogger.Instance.Enabled = false;
@@ -82,6 +85,10 @@ public partial class GameBoard : Node2D
 
       // The game board is now ready for input.
       IsReady = true;
+      State = GameBoardState.Playable;
+
+      // Log the starting game board.
+      DebugLogger.Instance.LogGameBoard("Initial Game Board", Globals.TileCount, ref _gameBoard, LogLevel.Info);
    }
 
    /// <summary>
@@ -90,6 +97,18 @@ public partial class GameBoard : Node2D
    /// <param name="delta"></param>
    public override void _Process(double delta)
    {
+      if (State == GameBoardState.AnimatingMoveResults)
+      {
+         lock (_movingTilesMutex)
+         {
+            //TileMoveAnimationRequest tileMoveRequest = _movingTiles.Where(t => !t.Tile.IsAnimating).FirstOrDefault();
+            if (_moveRequests.TryDequeue(out TileMoveAnimationRequest request))
+            {
+               _movingTiles.Add(request);
+               request.Tile.MoveTile(this, request.Row, request.Column, true);
+            }
+         }
+      }
    }
 
    /// <summary>
@@ -144,7 +163,7 @@ public partial class GameBoard : Node2D
       // Play a sound to indicate that the board is ready for play.
       // Do not play this at the very beginning of the game, only when the board has been regenerated
       // due to no valid moves.
-      if (IsReady)
+      if (State == GameBoardState.Playable)
       {
          var boardReadySound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("MainAudio_GameBoardReady");
          boardReadySound?.Play();
@@ -213,8 +232,6 @@ public partial class GameBoard : Node2D
 
       _primarySelection = null;
       _secondarySelection = null;
-
-      _isProcessingTurn = false;
 
       DebugLogger.Instance.Log("Selections cleared.", LogLevel.Trace);
    }
@@ -351,24 +368,17 @@ public partial class GameBoard : Node2D
          // No swap, so no moves to animate. Turn input back on.
          DebugLogger.Instance.Log("Bad swap, so re-enabling input!", LogLevel.Info);
          SetProcessInput(true);
+         State = GameBoardState.Playable;
       }
 
       // Clear any selections.
       ClearSelection();
 
-      // If matches were found and handled, verify that the board still has playable moves.
+      // If matches were found and handled, flag the board as ready for animating the drop.
+      // Also verify that the board still has playable moves.
       if (matches.Any())
       {
-         List<PotentialMoveInfo> potentialMoves = GetPossibleMoves();
-         if (!potentialMoves.Any())
-         {
-            // No moves are possible with the current board.
-            // A new board needs to be generated.
-            //TODO - figure out how this should be handled in multiplayer battle scenarios. It isn't the player's fault if this happens.
-            DebugLogger.Instance.Log("\tNo possible moves detected on this game board.", LogLevel.Info);
-            var noMoreMovesSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("MainAudio_NoMoreMoves");
-            noMoreMovesSound?.Play();
-         }
+         State = GameBoardState.AnimatingMoveResults;
       }
    }
 
@@ -382,6 +392,8 @@ public partial class GameBoard : Node2D
    /// <param name="column"></param>
    public void HandleTileMoveAnimationFinished(Tile tile, int row, int column)
    {
+      DebugLogger.Instance.Log($"\t{tile.Name} finished move.", LogLevel.Info);
+
       lock (_movingTilesMutex)
       {
          TileMoveAnimationRequest request = _movingTiles.Where(t => t.Tile == tile && t.Row == row && t.Column == column).First();
@@ -389,17 +401,11 @@ public partial class GameBoard : Node2D
          {
             DebugLogger.Instance.Log($"Tile [{row}, {column}] has finished animating. Remove from the list!", LogLevel.Trace);
             _movingTiles.Remove(request);
-
-            int dropSoundId = _rngesus.Next(1, 2);
-            var dropSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
-            dropSound?.Play();
          }
 
-         if (_movingTiles.Count == 0 && !_isProcessingTurn)
+         if (_movingTiles.Count == 0 && _moveRequests.IsEmpty && State == GameBoardState.AnimatingMoveResults)
          {
-            // No more animated moves being tracked. Turn input back on.
-            DebugLogger.Instance.Log("Re-enabling input!", LogLevel.Info);
-            SetProcessInput(true);
+            EndTurn();
          }
       }
    }
@@ -407,6 +413,29 @@ public partial class GameBoard : Node2D
    #endregion
 
    #region Private Methods
+
+   /// <summary>
+   /// Gets the board back into a state where it is playable again after processing a turn.
+   /// </summary>
+   private void EndTurn()
+   {
+      // No more animated moves being tracked. Turn input back on.
+      DebugLogger.Instance.Log("Re-enabling input!", LogLevel.Info);
+      DebugLogger.Instance.LogGameBoard($"MOVE END - Resulting game board:", Globals.TileCount, ref _gameBoard, LogLevel.Info);
+      State = GameBoardState.Playable;
+      SetProcessInput(true);
+
+      List<PotentialMoveInfo> potentialMoves = GetPossibleMoves();
+      if (!potentialMoves.Any())
+      {
+         // No moves are possible with the current board.
+         // A new board needs to be generated.
+         //TODO - figure out how this should be handled in multiplayer battle scenarios. It isn't the player's fault if this happens.
+         DebugLogger.Instance.Log("\tNo possible moves detected on this game board.", LogLevel.Info);
+         var noMoreMovesSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("MainAudio_NoMoreMoves");
+         noMoreMovesSound?.Play();
+      }
+   }
 
    /// <summary>
    /// Given a list of Tile objects, locate their row and column coordinates in the game board and return them as a list of tuples.
@@ -625,7 +654,7 @@ public partial class GameBoard : Node2D
       foreach (var match in matches)
       {
          // Update the score and display points gained animation.
-         if (IsReady)
+         if (State == GameBoardState.ProcessingTurn)
          {
             var scoreUpdateResults = Score.IncreaseScore(match, level);
             DebugLogger.Instance.Log($"HandleMatches() scoreUpdateResults (BasePoints = {scoreUpdateResults.BasePoints}) (Bonus = {scoreUpdateResults.BonusPointsRewarded})", LogLevel.Info);
@@ -670,7 +699,7 @@ public partial class GameBoard : Node2D
       ReplaceRemovedTiles();
 
       // Play an escalating sound chime.
-      if (IsReady)
+      if (State == GameBoardState.ProcessingTurn)
       {
          string soundName = $"Sound_MatchHypeLevel{level}";
          var soundToPlay = _gameScene.AudioNode.GetNode<AudioStreamPlayer>(soundName);
@@ -687,7 +716,6 @@ public partial class GameBoard : Node2D
             level = 0;
          }
 
-         //TODO: Not sure this is necessary - Task.Delay(TimeSpan.FromMilliseconds(100)).Wait();
          HandleMatches(newMatches, level + 1);
       }
    }
@@ -698,24 +726,24 @@ public partial class GameBoard : Node2D
    /// <param name="tile"></param>
    /// <param name="row"></param>
    /// <param name="column"></param>
-   /// <param name="isNew"></param>
-   /// <param name="removePostTween"></param>
-   private void RequestTileMove(Tile tile, int row, int column, bool isNew, bool removePostTween)
+   /// <param name="freshPull"></param>
+   private void RequestTileMove(Tile tile, int row, int column, bool freshPull)
    {
-      if (IsReady)
+      if (State == GameBoardState.ProcessingTurn)
       {
-         lock (_movingTilesMutex)
+         if (freshPull)
          {
-            if (!_movingTiles.Where(t => t.Tile == tile && t.Row == row && t.Column == column).Any())
-            {
-               _movingTiles.Add(new TileMoveAnimationRequest() { Tile = tile, Row = row, Column = column });
-               tile.MoveTile(this, row, column, isNew, IsReady);
-            }
+            // This is a fresh pull. Move the tile into a droppable position first.
+            tile.PrepareForDrop(column);
          }
+
+         DebugLogger.Instance.Log($"RequestTileMove() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]", LogLevel.Trace);
+
+         _moveRequests.Enqueue(new TileMoveAnimationRequest() { Tile = tile, Row = row, Column = column });
       }
       else
       {
-         tile.MoveTile(this, row, column, isNew, false);
+         tile.MoveTile(this, row, column, false);
       }
    }
 
@@ -743,7 +771,7 @@ public partial class GameBoard : Node2D
          {
             // Visually slide this tile down.
             DebugLogger.Instance.Log($"\t\tMove [{aboveRow}, {column}]({(int)higherTile.CurrentGemType}) down", LogLevel.Trace);
-            RequestTileMove(higherTile, row, column, false, IsReady);
+            RequestTileMove(higherTile, row, column, false);
             compressed = true;
 
             // Swap the data between grid slots to shift the non-null slot into the null.
@@ -817,7 +845,8 @@ public partial class GameBoard : Node2D
                var result = PullTile(row, column);
                if (result != null)
                {
-                  DebugLogger.Instance.Log($"\tNew tile pulled and placed at [{row}, {column}] with gem {(int)result.CurrentGemType}", LogLevel.Trace);
+                  result.Show();
+                  DebugLogger.Instance.Log($"\tNew tile pulled and placed at [{row}, {column}] with gem {(int)result.CurrentGemType}", LogLevel.Info);
                }
             }
          }
@@ -838,16 +867,19 @@ public partial class GameBoard : Node2D
       Tile tile = _tilePool.Pull();
       if (tile != null)
       {
+         DebugLogger.Instance.Log($"{tile.Name} pulled. (old row = {tile.Row}, old column = {tile.Column}, old gem = {(int)tile.CurrentGemType})", LogLevel.Trace);
+
          if (!tile.MouseEventHandlerRegistered)
          {
             tile.OnTileMouseEvent += Tile_OnTileMouseEvent;
             tile.MouseEventHandlerRegistered = true;
+            DebugLogger.Instance.Log($"{tile.Name} registered mouse handler.", LogLevel.Trace);
          }
 
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
+         tile.UpdateCoordinates(row, column);
          tile.SetGemType((Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized));
-         RequestTileMove(tile, row, column, true, IsReady);
-         tile.Show();
+         RequestTileMove(tile, row, column, true);
       }
 
       _gameBoard[row, column] = tile;
@@ -872,7 +904,7 @@ public partial class GameBoard : Node2D
          isAnimating = _movingTiles.Count() > 0;
       }
 
-      if (!isAnimating && !_isProcessingTurn && sender is Tile tile)
+      if (!isAnimating && State == GameBoardState.Playable && sender is Tile tile)
       {
          if (tile != null)
          {
@@ -938,7 +970,7 @@ public partial class GameBoard : Node2D
                      {
                         // Disable input while the move is playing out.
                         DebugLogger.Instance.Log("Disabling input...", LogLevel.Info);
-                        _isProcessingTurn = true;
+                        State = GameBoardState.ProcessingTurn;
                         SetProcessInput(false);
                         ClearTileBorders();
 
@@ -949,7 +981,6 @@ public partial class GameBoard : Node2D
                         SwapSelectedTiles(_primarySelection, _secondarySelection);
 
                         DebugLogger.Instance.IndentLevel = 0;
-                        DebugLogger.Instance.LogGameBoard($"MOVE END - Resulting game board:", Globals.TileCount, ref _gameBoard, LogLevel.Info);
                      }
                   }
                   break;
@@ -1000,6 +1031,7 @@ public partial class GameBoard : Node2D
    // the game board can process input again.
    private object _movingTilesMutex = new object();
    private List<TileMoveAnimationRequest> _movingTiles = new List<TileMoveAnimationRequest>();
+   private ConcurrentQueue<TileMoveAnimationRequest> _moveRequests = new ConcurrentQueue<TileMoveAnimationRequest>();
 
    // Manager for this game board's animated points pool.
    private AnimatedPointsManager _animatedPointsManager = null;
@@ -1025,9 +1057,6 @@ public partial class GameBoard : Node2D
 
    // Reference to the object that handles the move timer.
    private MoveTimerLabel _moveTimerLabel;
-
-   // Flag indicating if the game is busy working on a turn.
-   private bool _isProcessingTurn = false;
 
    #endregion
 }

@@ -13,34 +13,44 @@ namespace BattleTaterz.Core.Gameplay
    /// <summary>
    /// A pool of Tiles that can be recycled for performance.
    /// </summary>
-   public class TilePool
+   public partial class TilePool : Node2D
    {
       #region Properties
 
       /// <summary>
       /// The number of tile objects managed by the pool.
       /// </summary>
-      public int PoolSize { get; private set; } = 100;
+      [Export]
+      public int PoolSize { get; private set; } = (Globals.TileCount * Globals.TileCount) * 2;
 
       /// <summary>
-      /// The maximum number of seconds the tile pool is allowed to spin waiting for an available tile.
+      /// The maximum time the tile pool is allowed to spin waiting for an available tile.
       /// </summary>
-      public static int MaximumWaitInSeconds = 10;
+      public static int MaximumWaitInMs = 1000;
 
       #endregion
 
       #region Public Methods
 
-      public TilePool(GameBoard parent, int poolSize)
+      public void Initialize()
       {
-         PoolSize = poolSize;
-         _parentBoardRef = parent;
-
-         // Create the initial tile pool.
-         for (int i = 0; i < PoolSize; ++i)
+         if (!_initialized)
          {
-            CreateTile();
+            _parentBoardRef = GetParent<GameBoard>();
+
+            // Create the initial tile pool.
+            for (int i = 0; i < PoolSize; ++i)
+            {
+               CreateTile();
+            }
+
+            _initialized = true;
          }
+      }
+
+      public override void _Process(double delta)
+      {
+         //TODO - handle any clean-up of tiles that aren't in use and exceed the max pool size.
       }
 
       public Tile Pull()
@@ -53,11 +63,9 @@ namespace BattleTaterz.Core.Gameplay
          while (tile == null)
          {
             tile = _tilePool.Where(t => t.IsAvailable).FirstOrDefault();
-            Task.Delay(TimeSpan.FromMilliseconds(1)).Wait(); // just so it doesn't choke the CPU
-
-            if (tile == null && DateTime.Now.Subtract(startTime).TotalSeconds > MaximumWaitInSeconds)
+            if (tile == null && DateTime.Now.Subtract(startTime).TotalMilliseconds > MaximumWaitInMs)
             {
-               DebugLogger.Instance.Log($"The tile pool has exceeded the maximum number of seconds ({MaximumWaitInSeconds}) allowed. Creating a new tile for the pool.", LogLevel.Info);
+               DebugLogger.Instance.Log($"The tile pool has exceeded the maximum number of seconds ({MaximumWaitInMs}) allowed. Creating a new tile for the pool.", LogLevel.Info);
                tile = CreateTile();
                break;
             }
@@ -83,6 +91,7 @@ namespace BattleTaterz.Core.Gameplay
 
          tile.Name = $"Tile{Guid.NewGuid()}";
          tile.OwningBoard = _parentBoardRef;
+         tile.GlobalPosition = new Godot.Vector2(-1, -1);
          _tilePool.Add(tile);
          _parentBoardRef.AddChild(tile);
 
@@ -102,6 +111,11 @@ namespace BattleTaterz.Core.Gameplay
       /// Local ref to the game board for this tile pool.
       /// </summary>
       private GameBoard _parentBoardRef = null;
+
+      /// <summary>
+      /// Flag indicating if the pool has been initialized or not. It should only be initialized once.
+      /// </summary>
+      private bool _initialized = false;
 
       #endregion
    }

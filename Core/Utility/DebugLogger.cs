@@ -96,25 +96,35 @@ namespace BattleTaterz.Core.Utility
       {
          if (_enabled && LoggingLevel <= logLevel)
          {
-            List<string> rows = new List<string>();
+            List<string> gems = new List<string>();
+            List<string> positions = new List<string>();
+
             for (int row = 0; row < tileCount; ++row)
             {
-               string rowText = string.Empty;
+               string gemText = string.Empty;
+               string positionText = string.Empty;
+
                for (int column = 0; column < tileCount; ++column)
                {
                   string gemValue = "*"; // assume null until proven otherwise
+                  string positionValue = "";
+
                   if (gameBoard[row, column] != null)
                   {
                      gemValue = $"{(int)gameBoard[row, column].CurrentGemType}";
+                     positionValue = $"({gameBoard[row, column].Position.X}, {gameBoard[row, column].Position.Y})";
                   }
 
-                  rowText = $"{rowText} {gemValue}";
+                  gemText = $"{gemText} {gemValue}";
+                  positionText = $"{positionText}   {positionValue}";
                }
 
-               rows.Add(rowText);
+               gems.Add(gemText);
+               positions.Add(positionText);
             }
 
-            LogLines(headline, rows, logLevel);
+            LogLines(headline, gems, logLevel);
+            LogLines(headline, positions, logLevel);
          }
       }
 

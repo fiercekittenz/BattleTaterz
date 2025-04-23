@@ -1,0 +1,7 @@
+- Split RequestTileMove() into two methods.
+	- One will just relocate the tile without doing any animation.
+	- The other will create a move request and add it to a queue.
+- Once compression is done:
+	- Maybe order the list? Map? Whatever?
+	- Flag the game board as ready to animate.
+- _Process() will see we're ready to animate and start to pull one off the list at a time. They should be ordered already thanks to recursion.
