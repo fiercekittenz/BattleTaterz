@@ -62,7 +62,7 @@ namespace BattleTaterz.Core.Gameplay
          Tile tile = null;
          while (tile == null)
          {
-            tile = _tilePool.Where(t => t.IsAvailable).FirstOrDefault();
+            tile = _tilePool.Where(t => t.IsAvailable && !t.RecyclePostMove).FirstOrDefault();
             if (tile == null && DateTime.Now.Subtract(startTime).TotalMilliseconds > MaximumWaitInMs)
             {
                DebugLogger.Instance.Log($"The tile pool has exceeded the maximum number of seconds ({MaximumWaitInMs}) allowed. Creating a new tile for the pool.", LogLevel.Info);
@@ -74,6 +74,17 @@ namespace BattleTaterz.Core.Gameplay
          // Tile pulled. Flag it as unavailable and return.
          tile.MarkUnavailable();
          return tile;
+      }
+
+      public void DoRecycle()
+      {
+         foreach (var tile in _tilePool)
+         {
+            if (tile.RecyclePostMove)
+            {
+               tile.Recycle();
+            }
+         }
       }
 
       #endregion

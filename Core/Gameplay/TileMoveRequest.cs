@@ -25,6 +25,8 @@ namespace BattleTaterz.Core.Gameplay
 
       public MoveType Type { get; set; } = TileMoveRequest.MoveType.Static;
 
+      public bool AnimateRecycled { get; set; } = false;
+
       public override bool Equals(object obj)
       {
          if (obj is TileMoveRequest otherRequest)
@@ -35,7 +37,8 @@ namespace BattleTaterz.Core.Gameplay
                     Row == otherRequest.Row &&
                     Column == otherRequest.Column &&
                     RoundMoved == otherRequest.RoundMoved &&
-                    Type == otherRequest.Type)
+                    Type == otherRequest.Type &&
+                    AnimateRecycled == otherRequest.AnimateRecycled)
             {
                DebugLogger.Instance.Log($"\t\tTRUE {logLine}", Enums.LogLevel.Trace);
                return true;

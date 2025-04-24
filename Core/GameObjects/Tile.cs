@@ -59,6 +59,11 @@ public partial class Tile : Node2D
    public bool IsAnimating { get; private set; } = false;
 
    /// <summary>
+   /// Indicates if this tile needs to be recycled post-move or not.
+   /// </summary>
+   public bool RecyclePostMove { get; private set; } = false;
+
+   /// <summary>
    /// An event that can be listened to for mouse input to the tile.
    /// </summary>
    public event EventHandler<TileMouseEventArgs> OnTileMouseEvent;
@@ -87,7 +92,7 @@ public partial class Tile : Node2D
    /// <returns></returns>
    public override string ToString()
    {
-      return $"{Name} (Row = {Row}, Column = {Column}, CurrentGemType = {(int)CurrentGemType}, IsAvailable = {IsAvailable.ToString()}, IsAnimating = {IsAnimating.ToString()}, _recyleRequested = {_recycleRequested.ToString()}, _timeRecycleRequested = {_timeRecycleRequested.ToLongTimeString()})";
+      return $"{Name} (Row = {Row}, Column = {Column}, CurrentGemType = {(int)CurrentGemType}, IsAvailable = {IsAvailable.ToString()}, IsAnimating = {IsAnimating.ToString()}, RecyclePostMove = {RecyclePostMove.ToString()})";
    }
 
    /// <summary>
@@ -133,6 +138,12 @@ public partial class Tile : Node2D
       SetProcess(true);
    }
 
+   public void SetRecyclePostMove()
+   {
+      RecyclePostMove = true;
+      Hide();
+   }
+
    /// <summary>
    /// Clears current gem and coordinate information and sets the tile as available to the tile pool.
    /// </summary>
@@ -148,6 +159,7 @@ public partial class Tile : Node2D
       _gem.SetGemType(Gem.GemType.UNKNOWN);
       _wasPreparedFromPull = false;
       IsAvailable = true;
+      RecyclePostMove = false;
 
       // Halt processing in the scene graph for this node while it isn't in use.
       SetProcess(false);
@@ -205,7 +217,16 @@ public partial class Tile : Node2D
          var tween = GetTree().CreateTween();
          tween.SetProcessMode(Tween.TweenProcessMode.Physics);
          tween.SetParallel(true);
-         tween.TweenProperty(this, "modulate:a", 1.0f, 0.1f).SetEase(Tween.EaseType.In);
+
+         if (request.AnimateRecycled)
+         {
+            tween.TweenProperty(this, "modulate:a", 0.0f, 0.1f).SetEase(Tween.EaseType.In);
+         }
+         else
+         {
+            tween.TweenProperty(this, "modulate:a", 1.0f, 0.1f).SetEase(Tween.EaseType.In);
+         }
+
          tween.TweenProperty(this, "position", newPosition, 0.4f).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Spring).From(Position);
 
          if (Globals.RNGesus.Next(0, 10) % 3 == 0)

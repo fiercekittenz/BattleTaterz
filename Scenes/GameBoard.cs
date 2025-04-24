@@ -246,11 +246,7 @@ public partial class GameBoard : Node2D
       State = GameBoardState.Initializing;
 
       // Recycle all tiles.
-      var tiles = GetChildren().OfType<Tile>().ToList();
-      foreach (var tile in tiles)
-      {
-         tile.Recycle();
-      }
+      _tilePool.DoRecycle();
    }
 
    /// <summary>
@@ -464,7 +460,7 @@ public partial class GameBoard : Node2D
    /// <param name="fulfilledRequest"></param>
    public void HandleTileMoveAnimationFinished(TileMoveRequest fulfilledRequest)
    {
-      DebugLogger.Instance.Log($"\tHandleTileMoveAnimationFinished (round {ProcessingRound}) {fulfilledRequest.ToString()} finished move.", LogLevel.Info);
+      DebugLogger.Instance.Log($"\tHandleTileMoveAnimationFinished (round {ProcessingRound}) {fulfilledRequest.Tile.ToString()} finished move. (request = {fulfilledRequest.ToString()})", LogLevel.Info);
 
       if (State == GameBoardState.AnimatingMoveResults)
       {
@@ -585,6 +581,8 @@ public partial class GameBoard : Node2D
 
       ProcessingRound = 0;
       RoundsToProcess = 0;
+
+      _tilePool.DoRecycle();
 
       List<PotentialMoveInfo> potentialMoves = GetPossibleMoves();
       if (!potentialMoves.Any())
@@ -830,8 +828,8 @@ public partial class GameBoard : Node2D
             DebugLogger.Instance.Log($"HandleMatches(round {round}) recycling [{tile.Row}, {tile.Column}]({(int)tile.TileRef.CurrentGemType})...", LogLevel.Trace);
 
             // Put the tile back in the pool for availability.
-            DebugLogger.Instance.Log($"\tRecycling tile from GameBoard and flagging as available.", LogLevel.Trace);
-            tile.TileRef.Recycle();
+            DebugLogger.Instance.Log($"\tFlagging tile for recycling after the move ends.", LogLevel.Trace);
+            tile.TileRef.SetRecyclePostMove();
 
             // Remove the tile from the game board grid.
             DebugLogger.Instance.Log($"\tSetting [{tile.Row}, {tile.Column}] to null", LogLevel.Trace);
@@ -850,7 +848,7 @@ public partial class GameBoard : Node2D
          {
             if (_gameBoard[row, column] == null)
             {
-               CompressColumn(row, column, row, round /* cache in the recursive method the actual starting point */);
+               CompressColumn(ref matches, row, column, row, round /* cache in the recursive method the actual starting point */);
                break;
             }
          }
@@ -905,6 +903,7 @@ public partial class GameBoard : Node2D
             Row = row,
             Column = column,
             RoundMoved = round,
+            AnimateRecycled = tile.RecyclePostMove,
             Type = TileMoveRequest.MoveType.Animated
          };
 
@@ -919,6 +918,7 @@ public partial class GameBoard : Node2D
                Row = row,
                Column = column,
                RoundMoved = round,
+               AnimateRecycled = false,
                Type = TileMoveRequest.MoveType.Static
             };
 
@@ -950,7 +950,7 @@ public partial class GameBoard : Node2D
    /// <param name="row"></param>
    /// <param name="column"></param>
    /// <param name="round"></param>
-   private void CompressColumn(int row, int column, int startingRow, int round)
+   private void CompressColumn(ref List<MatchDetails> matches, int row, int column, int startingRow, int round)
    {
       bool compressed = false;
       DebugLogger.Instance.Log($"CompressColumn(round {round}) [{row}, {column}] starting from row {startingRow}", LogLevel.Info);
@@ -968,6 +968,7 @@ public partial class GameBoard : Node2D
          {
             // Visually slide this tile down.
             DebugLogger.Instance.Log($"\t\tMove [{aboveRow}, {column}]({(int)higherTile.CurrentGemType}) down", LogLevel.Trace);
+            
             RequestTileMove(higherTile, row, column, round, false);
             compressed = true;
 
@@ -979,19 +980,19 @@ public partial class GameBoard : Node2D
             if (belowRow < Globals.TileCount && _gameBoard[belowRow, column] == null)
             {
                DebugLogger.Instance.Log($"\t\tContinue compression from below (= [{belowRow}, {column}]) starting row {startingRow}", LogLevel.Trace);
-               CompressColumn(belowRow, column, startingRow, round);
+               CompressColumn(ref matches, belowRow, column, startingRow, round);
             }
             else
             {
                DebugLogger.Instance.Log($"\t\tContinue compression from [{row}, {column}] starting row {startingRow}", LogLevel.Trace);
-               CompressColumn(row, column, startingRow, round);
+               CompressColumn(ref matches, row, column, startingRow, round);
             }
          }
          // Else, we need to continue to move up until we have a valid higher tile and a potential null.
          else
          {
             DebugLogger.Instance.Log($"\t\tContinue compression from above (= [{aboveRow}, {column}]) starting row {startingRow}", LogLevel.Trace);
-            CompressColumn(aboveRow, column, startingRow, round);
+            CompressColumn(ref matches, aboveRow, column, startingRow, round);
          }
       }
       else if (_gameBoard[startingRow, column] == null)
@@ -1013,7 +1014,7 @@ public partial class GameBoard : Node2D
          if (!compressionComplete)
          {
             DebugLogger.Instance.Log($"\tCompression not complete. CompressColumn() again with [{startingRow}, {column}] starting row {startingRow}", LogLevel.Trace);
-            CompressColumn(startingRow, column, startingRow, round);
+            CompressColumn(ref matches, startingRow, column, startingRow, round);
          }
       }
 
