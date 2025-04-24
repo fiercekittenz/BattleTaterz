@@ -53,7 +53,7 @@ namespace BattleTaterz.Core.Utility
       /// <param name="logLevel"></param>
       public void Log(string text, LogLevel logLevel)
       {
-         if (_enabled && LoggingLevel <= logLevel)
+         if (Enabled && LoggingLevel <= logLevel)
          {
             using (StreamWriter stream = new StreamWriter(_logFile, true))
             {
@@ -71,7 +71,7 @@ namespace BattleTaterz.Core.Utility
       /// <param name="logLevel"></param>
       public void LogLines(string headline, List<string> lines, LogLevel logLevel)
       {
-         if (_enabled && LoggingLevel <= logLevel)
+         if (Enabled && LoggingLevel <= logLevel)
          {
             using (StreamWriter stream = new StreamWriter(_logFile, true))
             {
@@ -94,7 +94,7 @@ namespace BattleTaterz.Core.Utility
       /// <param name="logLevel"></param>
       public void LogGameBoard(string headline, int tileCount, ref Tile[,] gameBoard, LogLevel logLevel)
       {
-         if (_enabled && LoggingLevel <= logLevel)
+         if (Enabled && LoggingLevel <= logLevel)
          {
             List<string> gems = new List<string>();
             List<string> positions = new List<string>();
@@ -163,8 +163,6 @@ namespace BattleTaterz.Core.Utility
       private static DebugLogger _instance;
 
       private string _logFile;
-
-      private bool _enabled = true;
 
       #endregion
    }

@@ -121,6 +121,7 @@ public partial class Tile : Node2D
       DebugLogger.Instance.Log($"{Name} unavailable.", LogLevel.Trace);
 
       IsAvailable = false;
+      SetProcess(true);
    }
 
    /// <summary>
@@ -138,6 +139,9 @@ public partial class Tile : Node2D
       _gem.SetGemType(Gem.GemType.UNKNOWN);
       _wasPreparedFromPull = false;
       IsAvailable = true;
+
+      // Halt processing in the scene graph for this node while it isn't in use.
+      SetProcess(false);
    }
 
    /// <summary>
@@ -149,12 +153,15 @@ public partial class Tile : Node2D
    {
       // This is a freshly generated tile. It won't have a position yet, so the
       // start position needs to be above the column it'll drop from.
+      IsAnimating = true;
+
       Hide();
       Modulate = new Godot.Color(Modulate.R, Modulate.G, Modulate.B, 0.0f);
       Position = new Godot.Vector2((request.Column * Globals.TileSize) + Globals.TileGridOffset, (Globals.TileSize + Globals.TileGridOffset) * -1);
 
-      DebugLogger.Instance.Log($"\t{Name} is freshly positioned above column {request.Column} for drop: {Position.ToString()}", LogLevel.Trace);
+      DebugLogger.Instance.Log($"\t{Name} is freshly positioned above column {request.Column} for drop: {Position.ToString()}", LogLevel.Info);
 
+      IsAnimating = false;
       gameBoard.HandleTileMoveAnimationFinished(request);
    }
 
@@ -206,6 +213,7 @@ public partial class Tile : Node2D
 
             DebugLogger.Instance.Log($"\t{Name} finished animating ({Row}, {Column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
 
+            IsAnimating = false;
             gameBoard.HandleTileMoveAnimationFinished(request);
          });
       }
@@ -215,6 +223,7 @@ public partial class Tile : Node2D
          Position = newPosition;
          Show();
 
+         IsAnimating = false;
          gameBoard.HandleTileMoveAnimationFinished(request);
       }
    }

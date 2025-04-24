@@ -44,6 +44,12 @@ public partial class GameBoard : Node2D
    /// </summary>
    public GameBoardState State { get; private set; } = GameBoardState.Initializing;
 
+   /// <summary>
+   /// The round that is currently being processed.
+   /// </summary>
+   public int ProcessingRound { get; private set; } = 0;
+   public int RoundsToProcess { get; private set; } = 0;
+
    #endregion
 
    #region Public Methods
@@ -53,6 +59,7 @@ public partial class GameBoard : Node2D
    /// </summary>
    public override void _Ready()
    {
+      DebugLogger.Instance.Enabled = false;//TODO temporary, remove
       DebugLogger.Instance.Log($"GameBoard [TODO player id] has entered the node tree.", LogLevel.Info);
 
       // Cache specific nodes.
@@ -89,6 +96,7 @@ public partial class GameBoard : Node2D
 
       // Log the starting game board.
       DebugLogger.Instance.LogGameBoard("Initial Game Board", Globals.TileCount, ref _gameBoard, LogLevel.Info);
+      DebugLogger.Instance.Enabled = true;//TODO temporary, remove
    }
 
    /// <summary>
@@ -100,21 +108,52 @@ public partial class GameBoard : Node2D
       // Take care of animating tiles on frame ticks.
       if (State == GameBoardState.AnimatingMoveResults)
       {
-         lock (_movingTilesMutex)
-         {
-            if (_moveRequests.TryDequeue(out TileMoveRequest request))
-            {
-               _movingTiles.Add(request);
+         TileMoveRequest request = null;
 
-               if (request.Type == TileMoveRequest.MoveType.Static)
+         DebugLogger.Instance.Log($"\tProcess() {_moveRequests.Count} total remaining move requests yet to be processed.", LogLevel.Trace);
+
+         var roundRequests = _moveRequests.Where(r => r.RoundMoved == ProcessingRound);
+         if (roundRequests != null && roundRequests.Any())
+         {
+            if (_previouslyProcessedRequest != null)
+            {
+               var peek = roundRequests.First();
+               if (_previouslyProcessedRequest.Tile == peek.Tile &&
+                   _previouslyProcessedRequest.Type == TileMoveRequest.MoveType.Static &&
+                   peek.Type == TileMoveRequest.MoveType.Animated &&
+                   peek.Tile.IsAnimating)
                {
-                  // If this is a static move, it's meant to prepare the tile for dropping.
-                  request.Tile.PrepareForDrop(this, request);
+                  // This move request is for a tile that is still busy animating from a static move out of the tile pool.
+                  // It's still busy positioning itself for this animation, which will be the visible drop.
+                  // Early return and come back to it.
+                  DebugLogger.Instance.Log($"\t\tProcess() {peek.ToString()} is waiting on {_previouslyProcessedRequest.ToString()} to finish animating.", LogLevel.Info);
+                  return;
                }
-               else
-               {
-                  request.Tile.MoveTile(this, request);
-               }
+            }
+
+            _moveRequests.TryTake(out request);
+            _previouslyProcessedRequest = request;
+            DebugLogger.Instance.Log($"\t\t_Process() {roundRequests.Count()} remain for round {ProcessingRound}.", LogLevel.Trace);
+         }
+         else
+         {
+            DebugLogger.Instance.Log($"\t\t_Process() no requests pending for {ProcessingRound}. Waiting on round to be advanced.", LogLevel.Trace);
+         }
+
+         if (request != null)
+         {
+            _movingTiles.Add(request);
+
+            DebugLogger.Instance.Log($"\t\t_Process() {request.Tile.Name} moving from [{request.Tile.Row}, {request.Tile.Column}] to [{request.Row}, {request.Column}]. Round = {request.RoundMoved}", LogLevel.Trace);
+
+            if (request.Type == TileMoveRequest.MoveType.Static)
+            {
+               // If this is a static move, it's meant to prepare the tile for dropping.
+               request.Tile.PrepareForDrop(this, request);
+            }
+            else
+            {
+               request.Tile.MoveTile(this, request);
             }
          }
       }
@@ -134,6 +173,8 @@ public partial class GameBoard : Node2D
    /// </summary>
    public bool Generate()
    {
+      DebugLogger.Instance.Enabled = false;//TODO temporary, remove
+
       // Make the whole board invisible until we are done.
       Hide();
 
@@ -148,11 +189,11 @@ public partial class GameBoard : Node2D
       {
          for (int column = 0; column < Globals.TileCount; ++column)
          {
-            PullTile(row, column);
+            PullTile(row, column, 0);
          }
       }
 
-      var matches = CheckForMatches();
+      var matches = CheckForMatches(0);
       if (matches.Any())
       {
          HandleMatches(matches);
@@ -178,6 +219,8 @@ public partial class GameBoard : Node2D
          boardReadySound?.Play();
       }
 
+      DebugLogger.Instance.Enabled = true;//TODO temporary, remove
+
       // The game's afoot!
       return true;
    }
@@ -197,6 +240,12 @@ public partial class GameBoard : Node2D
       _primarySelection = null;
       _secondarySelection = null;
 
+      // Reset the state.
+      ProcessingRound = 0;
+      RoundsToProcess = 0;
+      State = GameBoardState.Initializing;
+
+      // Recycle all tiles.
       var tiles = GetChildren().OfType<Tile>().ToList();
       foreach (var tile in tiles)
       {
@@ -248,9 +297,10 @@ public partial class GameBoard : Node2D
    /// <summary>
    /// Algorithm for checking the player's game board for matched gems.
    /// </summary>
-   public List<MatchDetails> CheckForMatches()
+   /// <param name="round"></param>
+   public List<MatchDetails> CheckForMatches(int round)
    {
-      DebugLogger.Instance.Log("Checking for matches...", LogLevel.Info);
+      DebugLogger.Instance.Log($"CheckForMatches(round {round}) Checking for matches...", LogLevel.Info);
 
       List<MatchDetails> matches = new List<MatchDetails>();
 
@@ -282,7 +332,7 @@ public partial class GameBoard : Node2D
          }
       }
 
-      DebugLogger.Instance.Log($"Match search complete. {matches.Count} matches found.", LogLevel.Trace);
+      DebugLogger.Instance.Log($"CheckForMatches(round {round}) Match search complete. {matches.Count} matches found.", LogLevel.Trace);
       return matches;
    }
 
@@ -344,7 +394,7 @@ public partial class GameBoard : Node2D
       _gameBoard[originalSecondaryCoordinates.Item1, originalSecondaryCoordinates.Item2] = primary;
 
       // Verify the swap will lead to a match.
-      List<MatchDetails> matches = CheckForMatches();
+      List<MatchDetails> matches = CheckForMatches(0);
       if (matches.Any())
       {
          // Matches found, so go ahead and swap positions.
@@ -356,8 +406,10 @@ public partial class GameBoard : Node2D
          secondary.UpdateCoordinates(originalPrimaryCoordinates.Item1, originalPrimaryCoordinates.Item2);
          secondary.GlobalPosition = originalPrimaryPosition;
 
-         // Handle the results of the matches.
-         HandleMatches(matches);
+         // Reset the processing round back to one and handle the results of the matches.
+         ProcessingRound = 0;
+         RoundsToProcess = 0;
+         HandleMatches(matches, ProcessingRound);
 
          // Reset the move timer.
          //TODO - scale this based on level/difficulty
@@ -384,9 +436,22 @@ public partial class GameBoard : Node2D
       ClearSelection();
 
       // If matches were found and handled, flag the board as ready for animating the drop.
-      // Also verify that the board still has playable moves.
       if (matches.Any())
       {
+         DebugLogger.Instance.Log($"SwapSelectedTiles() has matches to process and is now sorted. {RoundsToProcess} rounds to process in total. Begin processing...", LogLevel.Trace);
+
+         if (DebugLogger.Instance.LoggingLevel == LogLevel.Info)
+         {
+            int count = 0;
+            foreach (var request in _moveRequests)
+            {
+               ++count;
+               DebugLogger.Instance.Log($"\t\t{count} SwapSelectedTiles() {request.ToString()}", LogLevel.Info);
+            }
+         }
+
+         ProcessingRound = 0;
+         DebugLogger.Instance.Log($"************************************************** ROUND {ProcessingRound} \"**************************************************", LogLevel.Trace);
          State = GameBoardState.AnimatingMoveResults;
       }
    }
@@ -399,21 +464,104 @@ public partial class GameBoard : Node2D
    /// <param name="fulfilledRequest"></param>
    public void HandleTileMoveAnimationFinished(TileMoveRequest fulfilledRequest)
    {
-      DebugLogger.Instance.Log($"\t{fulfilledRequest.Tile.Name} finished move.", LogLevel.Info);
+      DebugLogger.Instance.Log($"\tHandleTileMoveAnimationFinished (round {ProcessingRound}) {fulfilledRequest.ToString()} finished move.", LogLevel.Info);
 
-      lock (_movingTilesMutex)
+      if (State == GameBoardState.AnimatingMoveResults)
       {
-         if (_movingTiles.Any())
+         int remainingMoveRequestsThisRound = 0;
+         int remainingMoveRequestsInTotal = 0;
+         IEnumerable<TileMoveRequest> roundMoveRequests = null;
+
+         remainingMoveRequestsInTotal = _moveRequests.Count;
+         roundMoveRequests = _moveRequests.Where(r => r.RoundMoved == ProcessingRound);
+         if (roundMoveRequests != null && roundMoveRequests.Any())
          {
-            TileMoveRequest request = _movingTiles.Where(r => r == fulfilledRequest).First();
-            if (request != null)
+            remainingMoveRequestsThisRound = roundMoveRequests.Count();
+         }
+
+         DebugLogger.Instance.Log($"\t\tHandleTileMoveAnimationFinished (round {ProcessingRound}) {_moveRequests.Count} requests remaining in total, {remainingMoveRequestsThisRound} remaining in this round.", LogLevel.Trace);
+
+         int movingTilesRemainingThisRound = 0;
+         int movingTilesRemainingInTotal = 0;
+         IEnumerable<TileMoveRequest> movingTilesInRound = null;
+
+         movingTilesInRound = _movingTiles.Where(r => r.RoundMoved == ProcessingRound);
+         DebugLogger.Instance.Log($"\t\tHandleTileMoveAnimationFinished (round {ProcessingRound}) {movingTilesInRound.Count()} left moving in this round, {_movingTiles.Count} remain in total.", LogLevel.Trace);
+         if (movingTilesInRound != null && movingTilesInRound.Any())
+         {
+            remainingMoveRequestsThisRound = movingTilesInRound.Count();
+
+            DebugLogger.Instance.Log($"\t\t\tHandleTileMoveAnimationFinished (round {ProcessingRound}) {remainingMoveRequestsThisRound} moving tiles in this round remaining.", LogLevel.Trace);
+
+            TileMoveRequest requestToRemove = null;
+            _movingTiles.TryTake(out requestToRemove);
+            if (requestToRemove != null)
             {
-               DebugLogger.Instance.Log($"Tile [{fulfilledRequest.Row}, {fulfilledRequest.Column}] has finished animating. Remove from the list!", LogLevel.Trace);
-               _movingTiles.Remove(request);
+               DebugLogger.Instance.Log($"\t\t\tHandleTileMoveAnimationFinished (round {ProcessingRound}) Tile [{fulfilledRequest.Row}, {fulfilledRequest.Column}] has finished animating. Remove from the list!", LogLevel.Trace);
+            }
+            else
+            {
+               DebugLogger.Instance.Log($"\t\t\tHandleTileMoveAnimationFinished (round {ProcessingRound}) Tile [{fulfilledRequest.Row}, {fulfilledRequest.Column}] has finished animating, but couldn't be found in _movingTiles.", LogLevel.Trace);
+            }
+         }
+
+         // Refresh the number of moving tiles left in this round.
+         movingTilesInRound = _movingTiles.Where(r => r.RoundMoved == ProcessingRound);
+         if (movingTilesInRound != null)
+         {
+            movingTilesRemainingThisRound = movingTilesInRound.Count();
+
+            if (DebugLogger.Instance.LoggingLevel == LogLevel.Trace)
+            {
+               DebugLogger.Instance.Log($"\t\t\tmovingTilesInRound (round {ProcessingRound}) (count = {movingTilesRemainingThisRound}) Output:", LogLevel.Trace);
+               foreach (var req in movingTilesInRound)
+               {
+                  DebugLogger.Instance.Log($"\t\t\t\t{req.ToString()}", LogLevel.Trace);
+               }
+            }
+         }
+
+         // Refresh the number of move requests in this round.
+         roundMoveRequests = _moveRequests.Where(r => r.RoundMoved == ProcessingRound);
+         if (roundMoveRequests != null)
+         {
+            remainingMoveRequestsThisRound = roundMoveRequests.Count();
+
+            if (DebugLogger.Instance.LoggingLevel == LogLevel.Trace)
+            {
+               DebugLogger.Instance.Log($"\t\t\troundMoveRequests (round {ProcessingRound}) (count = {roundMoveRequests.Count()}) Output:", LogLevel.Trace);
+               foreach (var req in roundMoveRequests)
+               {
+                  DebugLogger.Instance.Log($"\t\t\t\t{req.ToString()}", LogLevel.Trace);
+               }
+            }
+         }
+
+         if (DebugLogger.Instance.LoggingLevel == LogLevel.Info)
+         {
+            // Update the moving tiles and move request total counts.
+            movingTilesRemainingInTotal = _movingTiles.Count;
+            remainingMoveRequestsInTotal = _moveRequests.Count;
+
+            DebugLogger.Instance.Log($"\t\tHandleTileMoveAnimationFinished (round {ProcessingRound}) movingTilesRemaining = {movingTilesRemainingInTotal}, remainingMoveRequests = {remainingMoveRequestsInTotal}, {ProcessingRound} >= {RoundsToProcess}, State = {State.ToString()}, remainingMoveRequestsThisRound = {remainingMoveRequestsThisRound}, movingTilesRemainingThisRound = {movingTilesRemainingThisRound}", LogLevel.Info);
+         }
+
+         // Check to see if this round is finished. If so, advance to the next round.
+         // Do an additional check after advancing to see if the move is finished.
+         if (remainingMoveRequestsThisRound == 0 && movingTilesRemainingThisRound == 0)
+         {
+            DebugLogger.Instance.Log($"\t\t\t4a. HandleTileMoveAnimationFinished (round {ProcessingRound}) done with this round; advance processing round by one.", LogLevel.Trace);
+            DebugLogger.Instance.Log($"*******************************************************************************************************************************", LogLevel.Trace);
+
+            ++ProcessingRound;
+            if (ProcessingRound < RoundsToProcess)
+            {
+               DebugLogger.Instance.Log($"************************************************** ROUND {ProcessingRound} \"**************************************************", LogLevel.Trace);
             }
 
-            if (_movingTiles.Count == 0 && _moveRequests.IsEmpty && State == GameBoardState.AnimatingMoveResults)
+            if (ProcessingRound >= RoundsToProcess)
             {
+               DebugLogger.Instance.Log($"Done handling all rounds! End Turn.", LogLevel.Trace);
                EndTurn();
             }
          }
@@ -434,6 +582,9 @@ public partial class GameBoard : Node2D
       DebugLogger.Instance.LogGameBoard($"MOVE END - Resulting game board:", Globals.TileCount, ref _gameBoard, LogLevel.Info);
       State = GameBoardState.Playable;
       SetProcessInput(true);
+
+      ProcessingRound = 0;
+      RoundsToProcess = 0;
 
       List<PotentialMoveInfo> potentialMoves = GetPossibleMoves();
       if (!potentialMoves.Any())
@@ -659,15 +810,15 @@ public partial class GameBoard : Node2D
    /// Handles the matches by going through each tile matched, calculating the score, removing, and replacing tiles
    /// by shifting downward.
    /// </summary>
-   private void HandleMatches(List<MatchDetails> matches, int level = 1)
+   private void HandleMatches(List<MatchDetails> matches, int round = 0)
    {
       foreach (var match in matches)
       {
          // Update the score and display points gained animation.
          if (State == GameBoardState.ProcessingTurn)
          {
-            var scoreUpdateResults = Score.IncreaseScore(match, level);
-            DebugLogger.Instance.Log($"HandleMatches() scoreUpdateResults (BasePoints = {scoreUpdateResults.BasePoints}) (Bonus = {scoreUpdateResults.BonusPointsRewarded})", LogLevel.Info);
+            var scoreUpdateResults = Score.IncreaseScore(match, round);
+            DebugLogger.Instance.Log($"HandleMatches(round {round}) scoreUpdateResults (BasePoints = {scoreUpdateResults.BasePoints}) (Bonus = {scoreUpdateResults.BonusPointsRewarded})", LogLevel.Info);
 
             _animatedPointsManager.Play(match.GlobalPositionAverage, scoreUpdateResults);
             _uiNode.GetNode<Godot.Label>("Labels/ScoreValueLabel").Text = scoreUpdateResults.UpdatedScore.ToString("N0");
@@ -676,7 +827,7 @@ public partial class GameBoard : Node2D
          // Remove the matched tiles from the board.
          foreach (var tile in match.Tiles)
          {
-            DebugLogger.Instance.Log($"HandleMatches() recycling [{tile.Row}, {tile.Column}]({(int)tile.TileRef.CurrentGemType})...", LogLevel.Trace);
+            DebugLogger.Instance.Log($"HandleMatches(round {round}) recycling [{tile.Row}, {tile.Column}]({(int)tile.TileRef.CurrentGemType})...", LogLevel.Trace);
 
             // Put the tile back in the pool for availability.
             DebugLogger.Instance.Log($"\tRecycling tile from GameBoard and flagging as available.", LogLevel.Trace);
@@ -699,35 +850,41 @@ public partial class GameBoard : Node2D
          {
             if (_gameBoard[row, column] == null)
             {
-               CompressColumn(row, column, row /* cache in the recursive method the actual starting point */);
+               CompressColumn(row, column, row, round /* cache in the recursive method the actual starting point */);
                break;
             }
          }
       }
 
       // After all holes are plugged with new tiles, evaluate the board for any bonus matches made through the drop.
-      ReplaceRemovedTiles();
+      ReplaceRemovedTiles(round);
 
       // Play an escalating sound chime.
       if (State == GameBoardState.ProcessingTurn)
       {
-         string soundName = $"Sound_MatchHypeLevel{level}";
+         string soundName = $"Sound_MatchHypeLevel{round}";
          var soundToPlay = _gameScene.AudioNode.GetNode<AudioStreamPlayer>(soundName);
          soundToPlay?.Play();
       }
 
       // Need to keep checking for matches after the collapse until no more matches are found.
-      var newMatches = CheckForMatches();
+      var newMatches = CheckForMatches(round);
       if (newMatches.Any())
       {
-         if (level >= Globals.MaxHypeLevel)
-         {
-            // Reset the level so the sounds will pitch up again.
-            level = 0;
-         }
+         //TODO - can't do this, otherwise we won't have an accurate count of rounds.
+         //if (round >= Globals.MaxHypeLevel)
+         //{
+         //   // Reset the level so the sounds will pitch up again.
+         //   round = 0;
+         //}
 
-         HandleMatches(newMatches, level + 1);
+         HandleMatches(newMatches, round + 1);
       }
+
+      // Increment the number of rounds to process.
+      ++RoundsToProcess;
+
+      DebugLogger.Instance.Log($"HandleMatches() level {round} done. Rounds to process = {RoundsToProcess}.", LogLevel.Info);
    }
 
    /// <summary>
@@ -736,8 +893,9 @@ public partial class GameBoard : Node2D
    /// <param name="tile"></param>
    /// <param name="row"></param>
    /// <param name="column"></param>
+   /// <param name="round"></param>
    /// <param name="freshPull"></param>
-   private void RequestTileMove(Tile tile, int row, int column, bool freshPull)
+   private void RequestTileMove(Tile tile, int row, int column, int round, bool freshPull)
    {
       if (State == GameBoardState.ProcessingTurn)
       {
@@ -746,35 +904,42 @@ public partial class GameBoard : Node2D
             Tile = tile,
             Row = row,
             Column = column,
+            RoundMoved = round,
             Type = TileMoveRequest.MoveType.Animated
          };
 
          if (freshPull)
          {
             // This is a fresh pull. Move the tile into a droppable position first.
-            DebugLogger.Instance.Log($"RequestTileMove() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Type: Static", LogLevel.Trace);
+            DebugLogger.Instance.Log($"RequestTileMove() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Round: {round}, Type: Static", LogLevel.Trace);
 
             TileMoveRequest prepareRequest = new TileMoveRequest()
             {
                Tile = tile,
                Row = row,
                Column = column,
+               RoundMoved = round,
                Type = TileMoveRequest.MoveType.Static
             };
 
-            _moveRequests.Enqueue(prepareRequest); 
-            _moveRequests.Enqueue(moveRequest);
-            //TODO tile.PrepareForDrop(column);
+            _moveRequests.Add(prepareRequest);
+            DebugLogger.Instance.Log($"RequestTileMove() A adding prepareRequest for {prepareRequest.ToString()}", LogLevel.Info);
+
+            _moveRequests.Add(moveRequest);
+            DebugLogger.Instance.Log($"RequestTileMove() B adding moveRequest for {moveRequest.ToString()}", LogLevel.Info);
          }
          else
          {
-            DebugLogger.Instance.Log($"RequestTileMove() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Type: Animated", LogLevel.Trace);
-            _moveRequests.Enqueue(moveRequest);
+            DebugLogger.Instance.Log($"RequestTileMove() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Round: {round}, Type: Animated", LogLevel.Trace);
+
+            _moveRequests.Add(moveRequest);
+            DebugLogger.Instance.Log($"RequestTileMove() C adding moveRequest for {moveRequest.ToString()}", LogLevel.Info);
          }
       }
       else
       {
-         tile.MoveTile(this, new TileMoveRequest(){ Tile = tile, Row = row, Column = column, Type = TileMoveRequest.MoveType.Static });
+         // Just directly move the tile into position. Largely used by the initial generation of the board.
+         tile.MoveTile(this, new TileMoveRequest() { Tile = tile, Row = row, Column = column, Type = TileMoveRequest.MoveType.Static });
       }
    }
 
@@ -784,10 +949,11 @@ public partial class GameBoard : Node2D
    /// </summary>
    /// <param name="row"></param>
    /// <param name="column"></param>
-   private void CompressColumn(int row, int column, int startingRow)
+   /// <param name="round"></param>
+   private void CompressColumn(int row, int column, int startingRow, int round)
    {
       bool compressed = false;
-      DebugLogger.Instance.Log($"CompressColumn() [{row}, {column}] starting from row {startingRow}", LogLevel.Trace);
+      DebugLogger.Instance.Log($"CompressColumn(round {round}) [{row}, {column}] starting from row {startingRow}", LogLevel.Info);
 
       int aboveRow = row - 1;
       if (aboveRow >= 0)
@@ -802,7 +968,7 @@ public partial class GameBoard : Node2D
          {
             // Visually slide this tile down.
             DebugLogger.Instance.Log($"\t\tMove [{aboveRow}, {column}]({(int)higherTile.CurrentGemType}) down", LogLevel.Trace);
-            RequestTileMove(higherTile, row, column, false);
+            RequestTileMove(higherTile, row, column, round, false);
             compressed = true;
 
             // Swap the data between grid slots to shift the non-null slot into the null.
@@ -813,19 +979,19 @@ public partial class GameBoard : Node2D
             if (belowRow < Globals.TileCount && _gameBoard[belowRow, column] == null)
             {
                DebugLogger.Instance.Log($"\t\tContinue compression from below (= [{belowRow}, {column}]) starting row {startingRow}", LogLevel.Trace);
-               CompressColumn(belowRow, column, startingRow);
+               CompressColumn(belowRow, column, startingRow, round);
             }
             else
             {
                DebugLogger.Instance.Log($"\t\tContinue compression from [{row}, {column}] starting row {startingRow}", LogLevel.Trace);
-               CompressColumn(row, column, startingRow);
+               CompressColumn(row, column, startingRow, round);
             }
          }
          // Else, we need to continue to move up until we have a valid higher tile and a potential null.
          else
          {
             DebugLogger.Instance.Log($"\t\tContinue compression from above (= [{aboveRow}, {column}]) starting row {startingRow}", LogLevel.Trace);
-            CompressColumn(aboveRow, column, startingRow);
+            CompressColumn(aboveRow, column, startingRow, round);
          }
       }
       else if (_gameBoard[startingRow, column] == null)
@@ -847,7 +1013,7 @@ public partial class GameBoard : Node2D
          if (!compressionComplete)
          {
             DebugLogger.Instance.Log($"\tCompression not complete. CompressColumn() again with [{startingRow}, {column}] starting row {startingRow}", LogLevel.Trace);
-            CompressColumn(startingRow, column, startingRow);
+            CompressColumn(startingRow, column, startingRow, round);
          }
       }
 
@@ -856,15 +1022,16 @@ public partial class GameBoard : Node2D
          DebugLogger.Instance.LogGameBoard($"CompressColumn() ([{row}, {column}] startingRow = {startingRow}) resulting game board:", Globals.TileCount, ref _gameBoard, LogLevel.Trace);
       }
 
-      DebugLogger.Instance.Log($"CompressColumn() ([{row}, {column}] startingRow = {startingRow}) returning", LogLevel.Trace);
+      DebugLogger.Instance.Log($"CompressColumn(round {round}) ([{row}, {column}] startingRow = {startingRow}) returning", LogLevel.Info);
    }
 
    /// <summary>
    /// Goes through the board and replaces any instances of a null entry with a new tile and random gem.
    /// </summary>
-   private void ReplaceRemovedTiles()
+   /// <param name="round"></param>
+   private void ReplaceRemovedTiles(int round)
    {
-      DebugLogger.Instance.Log("ReplaceRemovedTiles() begin...", LogLevel.Info);
+      DebugLogger.Instance.Log($"ReplaceRemovedTiles(round {round}) begin...", LogLevel.Info);
 
       for (int row = 0; row < Globals.TileCount; ++row)
       {
@@ -873,7 +1040,7 @@ public partial class GameBoard : Node2D
             if (_gameBoard[row, column] == null)
             {
                DebugLogger.Instance.Log($"\tReplacing [{row}, {column}]", LogLevel.Trace);
-               var result = PullTile(row, column);
+               var result = PullTile(row, column, round);
                if (result != null)
                {
                   //result.Show();
@@ -883,7 +1050,7 @@ public partial class GameBoard : Node2D
          }
       }
 
-      DebugLogger.Instance.Log("ReplaceRemovedTiles() complete.", LogLevel.Info);
+      DebugLogger.Instance.Log($"ReplaceRemovedTiles(round {round}) complete.", LogLevel.Info);
    }
 
    /// <summary>
@@ -891,8 +1058,9 @@ public partial class GameBoard : Node2D
    /// </summary>
    /// <param name="row"></param>
    /// <param name="column"></param>
+   /// <param name="round"></param>
    /// <exception cref="Exception"></exception>
-   private Tile PullTile(int row, int column)
+   private Tile PullTile(int row, int column, int round)
    {
       // Get a tile from the pool and move it into position.
       Tile tile = _tilePool.Pull();
@@ -910,7 +1078,7 @@ public partial class GameBoard : Node2D
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
          tile.UpdateCoordinates(row, column);
          tile.SetGemType((Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized));
-         RequestTileMove(tile, row, column, true);
+         RequestTileMove(tile, row, column, round, true);
       }
 
       _gameBoard[row, column] = tile;
@@ -929,11 +1097,7 @@ public partial class GameBoard : Node2D
    /// <param name="e"></param>
    private void Tile_OnTileMouseEvent(object sender, TileMouseEventArgs e)
    {
-      bool isAnimating = false;
-      lock (_movingTilesMutex)
-      {
-         isAnimating = _movingTiles.Count() > 0;
-      }
+      bool isAnimating = _movingTiles.Count() > 0;
 
       if (!isAnimating && State == GameBoardState.Playable && sender is Tile tile)
       {
@@ -1060,9 +1224,8 @@ public partial class GameBoard : Node2D
    // List of tiles currently being moved. Once they are done animating,
    // they are removed from the list. If all tiles are removed, that is when
    // the game board can process input again.
-   private object _movingTilesMutex = new object();
-   private List<TileMoveRequest> _movingTiles = new List<TileMoveRequest>();
-   private ConcurrentQueue<TileMoveRequest> _moveRequests = new ConcurrentQueue<TileMoveRequest>();
+   private BlockingCollection<TileMoveRequest> _movingTiles = new BlockingCollection<TileMoveRequest>();
+   private BlockingCollection<TileMoveRequest> _moveRequests = new BlockingCollection<TileMoveRequest>();
 
    // Manager for this game board's animated points pool.
    private AnimatedPointsManager _animatedPointsManager = null;
@@ -1079,6 +1242,9 @@ public partial class GameBoard : Node2D
    // Selected tiles for swap consideration.
    private Tile _primarySelection;
    private Tile _secondarySelection;
+
+   // The previously processed request. Used to determine if the current request was handled as an animated move following a static move.
+   private TileMoveRequest _previouslyProcessedRequest = null;
 
    // Random number generator.
    private System.Random _rngesus;

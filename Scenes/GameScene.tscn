@@ -104,17 +104,17 @@ volume_db = -30.0
 stream = ExtResource("11_yl3ua")
 volume_db = -30.0
 
-[node name="Sound_MatchHypeLevel1" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_MatchHypeLevel0" type="AudioStreamPlayer" parent="Audio"]
 stream = ExtResource("12_lko2l")
 volume_db = -30.0
 bus = &"sfx"
 
-[node name="Sound_MatchHypeLevel2" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_MatchHypeLevel1" type="AudioStreamPlayer" parent="Audio"]
 stream = ExtResource("13_em6uu")
 volume_db = -30.0
 bus = &"sfx"
 
-[node name="Sound_MatchHypeLevel3" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_MatchHypeLevel2" type="AudioStreamPlayer" parent="Audio"]
 stream = ExtResource("14_odb6r")
 volume_db = -30.0
 bus = &"sfx"
