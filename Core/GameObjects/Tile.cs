@@ -82,6 +82,15 @@ public partial class Tile : Node2D
    }
 
    /// <summary>
+   /// Override ToString() for easier debugging of logs.
+   /// </summary>
+   /// <returns></returns>
+   public override string ToString()
+   {
+      return $"{Name} (Row = {Row}, Column = {Column}, CurrentGemType = {(int)CurrentGemType}, IsAvailable = {IsAvailable.ToString()}, IsAnimating = {IsAnimating.ToString()}, _recyleRequested = {_recycleRequested.ToString()}, _timeRecycleRequested = {_timeRecycleRequested.ToLongTimeString()})";
+   }
+
+   /// <summary>
    /// Called every frame. 'delta' is the elapsed time since the previous frame.
    /// </summary>
    /// <param name="delta"></param>
