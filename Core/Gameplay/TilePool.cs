@@ -19,14 +19,20 @@ namespace BattleTaterz.Core.Gameplay
 
       /// <summary>
       /// The number of tile objects managed by the pool.
+      /// Should be at least the number of tiles that can be on the board at any given time plus a few extra.
       /// </summary>
       [Export]
-      public int PoolSize { get; private set; } = (Globals.TileCount * Globals.TileCount) * 2;
+      public int PoolSize { get; private set; } = ( (Globals.TileCount * Globals.TileCount) + ( (Globals.TileCount * Globals.TileCount) / 2 ) );
 
       /// <summary>
       /// The maximum time the tile pool is allowed to spin waiting for an available tile.
       /// </summary>
-      public static int MaximumWaitInMs = 1000;
+      public static int MaximumWaitInMs = 100;
+
+      /// <summary>
+      /// The number of minutes that need to pass before extra, unused tiles in the pool are discarded.
+      /// </summary>
+      public static int CleanUpTimeInMinutes = 5;
 
       #endregion
 
@@ -57,7 +63,30 @@ namespace BattleTaterz.Core.Gameplay
       /// <param name="delta"></param>
       public override void _Process(double delta)
       {
-         //TODO - handle any clean-up of tiles that aren't in use and exceed the max pool size.
+         // Perform periodic clean-up of excess objects in the pool.
+         if (DateTime.Now.Subtract(_lastCleanUpTime).TotalMinutes > CleanUpTimeInMinutes && _tilePool.Count > PoolSize)
+         {
+            var unusedTiles = _tilePool.Where(t => t.IsAvailable).DefaultIfEmpty().ToList();
+            if (unusedTiles != null && unusedTiles.Any())
+            {
+               int overflowAmount = _tilePool.Count - PoolSize;
+
+               var tilesToRemove = new List<Tile>();
+               for (int count = 0; count < overflowAmount; ++count)
+               {
+                  tilesToRemove.Add(unusedTiles[count]);
+               }
+
+               foreach (var tile in tilesToRemove)
+               {
+                  _tilePool.Remove(tile);
+                  _parentBoardRef.RemoveChild(tile);
+                  tile.QueueFree();
+               }
+            }
+
+            _lastCleanUpTime = DateTime.Now;
+         }
       }
 
       /// <summary>
@@ -73,7 +102,7 @@ namespace BattleTaterz.Core.Gameplay
          Tile tile = null;
          while (tile == null)
          {
-            tile = _tilePool.Where(t => t.IsAvailable).FirstOrDefault();
+            tile = _tilePool.Where(t => t.IsAvailable).DefaultIfEmpty().First();
             if (tile == null && DateTime.Now.Subtract(startTime).TotalMilliseconds > MaximumWaitInMs)
             {
                DebugLogger.Instance.Log($"The tile pool has exceeded the maximum number of seconds ({MaximumWaitInMs}) allowed. Creating a new tile for the pool.", LogLevel.Info);
@@ -141,6 +170,11 @@ namespace BattleTaterz.Core.Gameplay
       /// Local ref to the game board for this tile pool.
       /// </summary>
       private GameBoard _parentBoardRef = null;
+
+      /// <summary>
+      /// The last time a clean-up of extra tiles was performed.
+      /// </summary>
+      private DateTime _lastCleanUpTime = DateTime.Now;
 
       /// <summary>
       /// Flag indicating if the pool has been initialized or not. It should only be initialized once.

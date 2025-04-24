@@ -8,7 +8,9 @@ using System;
 using System.Data.Common;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
+using static Godot.WebSocketPeer;
 using static Tile;
 
 public partial class Tile : Node2D
@@ -172,15 +174,6 @@ public partial class Tile : Node2D
       tween.SetProcessMode(Tween.TweenProcessMode.Physics);
       tween.SetParallel(true);
       tween.TweenProperty(this, "modulate:a", 0.0f, 0.1f).SetEase(Tween.EaseType.In);
-
-      //TODO - play a sound for recycling, animate a poof?
-      //if (Globals.RNGesus.Next(0, 10) % 3 == 0)
-      //{
-      //   int dropSoundId = Globals.RNGesus.Next(1, 3);
-      //   var dropSound = gameBoard.GetParent<GameScene>().AudioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
-      //   dropSound?.Play();
-      //}
-
       tween.Finished += (() =>
       {
          // Clean up and let the GameBoard know that this tile is done animating.
@@ -248,6 +241,23 @@ public partial class Tile : Node2D
          tween.TweenProperty(this, "modulate:a", 1.0f, 0.1f).SetEase(Tween.EaseType.In);
          tween.TweenProperty(this, "position", newPosition, 0.4f).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Spring).From(Position);
 
+         // Play an escalating sound chime.
+         string hypeSoundName = "Sound_MatchHypeLevel";
+         if (request.RoundMoved >= Globals.MaxHypeLevel)
+         {
+            hypeSoundName = $"{hypeSoundName}{Globals.MaxHypeLevel}";
+         }
+         else
+         {
+            hypeSoundName = $"{hypeSoundName}{request.RoundMoved + 1}";
+         }
+
+         DebugLogger.Instance.Log($"\tMoveTile() {Name} playing {hypeSoundName}", LogLevel.Trace);
+         var soundToPlay = gameBoard.GetParent<GameScene>().AudioNode.GetNode<AudioStreamPlayer>(hypeSoundName);
+         soundToPlay?.Play();
+
+         // Play a drop sound.
+         //TODO: find some drop sounds that aren't as clunky/chopping wood sounding.
          if (Globals.RNGesus.Next(0, 10) % 3 == 0)
          {
             int dropSoundId = Globals.RNGesus.Next(1, 3);

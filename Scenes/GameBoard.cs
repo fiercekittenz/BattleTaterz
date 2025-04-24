@@ -873,25 +873,10 @@ public partial class GameBoard : Node2D
       // After all holes are plugged with new tiles, evaluate the board for any bonus matches made through the drop.
       ReplaceRemovedTiles(round);
 
-      // Play an escalating sound chime.
-      if (State == GameBoardState.ProcessingTurn)
-      {
-         string soundName = $"Sound_MatchHypeLevel{round}";
-         var soundToPlay = _gameScene.AudioNode.GetNode<AudioStreamPlayer>(soundName);
-         soundToPlay?.Play();
-      }
-
       // Need to keep checking for matches after the collapse until no more matches are found.
       var newMatches = CheckForMatches(round);
       if (newMatches.Any())
       {
-         //TODO - can't do this, otherwise we won't have an accurate count of rounds.
-         //if (round >= Globals.MaxHypeLevel)
-         //{
-         //   // Reset the level so the sounds will pitch up again.
-         //   round = 0;
-         //}
-
          HandleMatches(newMatches, round + 1);
       }
 

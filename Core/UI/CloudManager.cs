@@ -1,5 +1,6 @@
 using BattleTaterz.Core;
 using BattleTaterz.Core.Enums;
+using BattleTaterz.Core.Gameplay;
 using BattleTaterz.Core.UI;
 using BattleTaterz.Core.Utility;
 using Godot;
@@ -22,7 +23,12 @@ public partial class CloudManager : Node2D
    /// <summary>
    /// The maximum time the pool is allowed to spin waiting for an available object.
    /// </summary>
-   public static int MaximumWaitInMs = 1000;
+   public static int MaximumWaitInMs = 100;
+
+   /// <summary>
+   /// The number of minutes that need to pass before extra, unused clouds in the pool are discarded.
+   /// </summary>
+   public static int CleanUpTimeInMinutes = 5;
 
    public override void _Ready()
    {
@@ -33,9 +39,36 @@ public partial class CloudManager : Node2D
       }
    }
 
+   /// <summary>
+   /// Game loop processing of the cloud object pool.
+   /// </summary>
+   /// <param name="delta"></param>
    public override void _Process(double delta)
    {
-      //TODO - handle any clean-up of clouds that aren't in use and exceed the max pool size.
+      // Perform periodic clean-up of excess objects in the pool.
+      if (DateTime.Now.Subtract(_lastCleanUpTime).TotalMinutes > CleanUpTimeInMinutes && _cloudPool.Count > PoolSize)
+      {
+         var unusedClouds = _cloudPool.Where(t => t.IsAvailable).DefaultIfEmpty().ToList();
+         if (unusedClouds != null && unusedClouds.Any())
+         {
+            int overflowAmount = _cloudPool.Count - PoolSize;
+
+            var cloudsToRemove = new List<AnimatedCloud>();
+            for (int count = 0; count < overflowAmount; ++count)
+            {
+               cloudsToRemove.Add(unusedClouds[count]);
+            }
+
+            foreach (var cloud in cloudsToRemove)
+            {
+               _cloudPool.Remove(cloud);
+               GameSceneRef.RemoveChild(cloud);
+               cloud.QueueFree();
+            }
+         }
+
+         _lastCleanUpTime = DateTime.Now;
+      }
    }
 
    public void Initialize(GameScene gameScene)
@@ -105,8 +138,7 @@ public partial class CloudManager : Node2D
          AnimatedCloud cloud = null;
          while (cloud == null)
          {
-            cloud = _cloudPool.Where(c => c.IsAvailable).FirstOrDefault();
-
+            cloud = _cloudPool.Where(c => c.IsAvailable).DefaultIfEmpty().First();
             if (cloud == null && DateTime.Now.Subtract(startTime).TotalMilliseconds > MaximumWaitInMs)
             {
                DebugLogger.Instance.Log($"The cloud pool has exceeded the maximum number of seconds ({MaximumWaitInMs}) allowed. Creating a new tile for the pool.", LogLevel.Info);
@@ -122,6 +154,11 @@ public partial class CloudManager : Node2D
    private System.Collections.Generic.List<AnimatedCloud> _cloudPool = new System.Collections.Generic.List<AnimatedCloud>();
 
    private Godot.Timer _spawnTimer = null;
+
+   /// <summary>
+   /// The last time a clean-up of extra tiles was performed.
+   /// </summary>
+   private DateTime _lastCleanUpTime = DateTime.Now;
 
    /// <summary>
    /// Flag indicating if the pool has been initialized or not. It should only be initialized once.

@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3 uid="uid://dwq1urk6jpoqr"]
+[gd_scene load_steps=28 format=3 uid="uid://dwq1urk6jpoqr"]
 
 [ext_resource type="Script" uid="uid://bb68lhat8iyfp" path="res://Scenes/GameScene.cs" id="1_gipt1"]
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
@@ -10,7 +10,9 @@
 [ext_resource type="AudioStream" uid="uid://5wyg6301w2ma" path="res://Assets/Audio/BadMove.mp3" id="9_wp4mh"]
 [ext_resource type="AudioStream" uid="uid://db1k0pjrtr2o4" path="res://Assets/Audio/NoMoreMoves.ogg" id="10_y0yaw"]
 [ext_resource type="AudioStream" uid="uid://d2ogsdqnc2fyp" path="res://Assets/Audio/GameBoardReady.ogg" id="11_yl3ua"]
+[ext_resource type="AudioStream" uid="uid://biodyr2i0aa3f" path="res://Assets/Audio/MatchHypeLevel4.ogg" id="12_ebcm8"]
 [ext_resource type="AudioStream" uid="uid://dan6nslgd180r" path="res://Assets/Audio/MatchHypeLevel1.ogg" id="12_lko2l"]
+[ext_resource type="AudioStream" uid="uid://cupe3wvamvhsi" path="res://Assets/Audio/MatchHypeLevel5.ogg" id="13_4v654"]
 [ext_resource type="AudioStream" uid="uid://j7v0wy6hu2uf" path="res://Assets/Audio/MatchHypeLevel2.ogg" id="13_em6uu"]
 [ext_resource type="AudioStream" uid="uid://joxuek3ba8xs" path="res://Assets/Audio/MatchHypeLevel3.ogg" id="14_odb6r"]
 [ext_resource type="AudioStream" uid="uid://c6u33jkgcesxi" path="res://Assets/Audio/SelectSecondaryGem.mp3" id="16_6gwdq"]
@@ -106,17 +108,27 @@ volume_db = -30.0
 
 [node name="Sound_MatchHypeLevel0" type="AudioStreamPlayer" parent="Audio"]
 stream = ExtResource("12_lko2l")
-volume_db = -30.0
+volume_db = -15.0
 bus = &"sfx"
 
 [node name="Sound_MatchHypeLevel1" type="AudioStreamPlayer" parent="Audio"]
 stream = ExtResource("13_em6uu")
-volume_db = -30.0
+volume_db = -15.0
 bus = &"sfx"
 
 [node name="Sound_MatchHypeLevel2" type="AudioStreamPlayer" parent="Audio"]
 stream = ExtResource("14_odb6r")
-volume_db = -30.0
+volume_db = -15.0
+bus = &"sfx"
+
+[node name="Sound_MatchHypeLevel3" type="AudioStreamPlayer" parent="Audio"]
+stream = ExtResource("12_ebcm8")
+volume_db = -15.0
+bus = &"sfx"
+
+[node name="Sound_MatchHypeLevel4" type="AudioStreamPlayer" parent="Audio"]
+stream = ExtResource("13_4v654")
+volume_db = -15.0
 bus = &"sfx"
 
 [node name="Sound_SelectSecondary" type="AudioStreamPlayer" parent="Audio"]
