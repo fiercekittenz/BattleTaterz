@@ -108,7 +108,7 @@ public partial class GameBoard : Node2D
       // Take care of animating tiles on frame ticks.
       if (State == GameBoardState.AnimatingMoveResults)
       {
-         TileMoveRequest request = null;
+         TileAnimationRequest request = null;
 
          DebugLogger.Instance.Log($"\tProcess() {_moveRequests.Count} total remaining move requests yet to be processed.", LogLevel.Trace);
 
@@ -119,8 +119,8 @@ public partial class GameBoard : Node2D
             {
                var peek = roundRequests.First();
                if (_previouslyProcessedRequest.Tile == peek.Tile &&
-                   _previouslyProcessedRequest.Type == TileMoveRequest.MoveType.Static &&
-                   peek.Type == TileMoveRequest.MoveType.Animated &&
+                   _previouslyProcessedRequest.Type == TileAnimationRequest.AnimationType.Static &&
+                   peek.Type == TileAnimationRequest.AnimationType.Animated &&
                    peek.Tile.IsAnimating)
                {
                   // This move request is for a tile that is still busy animating from a static move out of the tile pool.
@@ -146,14 +146,26 @@ public partial class GameBoard : Node2D
 
             DebugLogger.Instance.Log($"\t\t_Process() {request.Tile.Name} moving from [{request.Tile.Row}, {request.Tile.Column}] to [{request.Row}, {request.Column}]. Round = {request.RoundMoved}", LogLevel.Trace);
 
-            if (request.Type == TileMoveRequest.MoveType.Static)
+            switch (request.Type)
             {
-               // If this is a static move, it's meant to prepare the tile for dropping.
-               request.Tile.PrepareForDrop(this, request);
-            }
-            else
-            {
-               request.Tile.MoveTile(this, request);
+               case TileAnimationRequest.AnimationType.Static:
+                  {
+                     // If this is a static move, it's meant to prepare the tile for dropping.
+                     request.Tile.PrepareForDrop(this, request);
+                  }
+                  break;
+
+               case TileAnimationRequest.AnimationType.Animated:
+                  {
+                     request.Tile.MoveTile(this, request);
+                  }
+                  break;
+
+               case TileAnimationRequest.AnimationType.Recycling:
+                  {
+                     request.Tile.AnimateRecycle(this, request);
+                  }
+                  break;
             }
          }
       }
@@ -206,6 +218,9 @@ public partial class GameBoard : Node2D
             Generate();
          }
       }
+
+      // Recycle any tiles that were flagged for recycling during the generation process.
+      _tilePool.DoRecycle();
 
       // Now show!
       Show();
@@ -369,7 +384,7 @@ public partial class GameBoard : Node2D
    /// <param name="secondary"></param>
    public void SwapSelectedTiles(Tile primary, Tile secondary)
    {
-      if (DebugLogger.Instance.Enabled)
+      if (DebugLogger.Instance.Enabled && DebugLogger.Instance.LoggingLevel == LogLevel.Info)
       {
          // Only check this information if we want to log debug info to avoid the additional cycles.
          var primaryCoordinates = GetTileCoordinates(primary);
@@ -436,13 +451,13 @@ public partial class GameBoard : Node2D
       {
          DebugLogger.Instance.Log($"SwapSelectedTiles() has matches to process and is now sorted. {RoundsToProcess} rounds to process in total. Begin processing...", LogLevel.Trace);
 
-         if (DebugLogger.Instance.LoggingLevel == LogLevel.Info)
+         if (DebugLogger.Instance.Enabled && DebugLogger.Instance.LoggingLevel == LogLevel.Info)
          {
             int count = 0;
             foreach (var request in _moveRequests)
             {
                ++count;
-               DebugLogger.Instance.Log($"\t\t{count} SwapSelectedTiles() {request.ToString()}", LogLevel.Info);
+               DebugLogger.Instance.Log($"\t\t{count} SwapSelectedTiles() {request.ToString()}", LogLevel.Trace);
             }
          }
 
@@ -458,7 +473,7 @@ public partial class GameBoard : Node2D
    /// to the gameboard.
    /// </summary>
    /// <param name="fulfilledRequest"></param>
-   public void HandleTileMoveAnimationFinished(TileMoveRequest fulfilledRequest)
+   public void HandleTileMoveAnimationFinished(TileAnimationRequest fulfilledRequest)
    {
       DebugLogger.Instance.Log($"\tHandleTileMoveAnimationFinished (round {ProcessingRound}) {fulfilledRequest.Tile.ToString()} finished move. (request = {fulfilledRequest.ToString()})", LogLevel.Info);
 
@@ -466,7 +481,7 @@ public partial class GameBoard : Node2D
       {
          int remainingMoveRequestsThisRound = 0;
          int remainingMoveRequestsInTotal = 0;
-         IEnumerable<TileMoveRequest> roundMoveRequests = null;
+         IEnumerable<TileAnimationRequest> roundMoveRequests = null;
 
          remainingMoveRequestsInTotal = _moveRequests.Count;
          roundMoveRequests = _moveRequests.Where(r => r.RoundMoved == ProcessingRound);
@@ -479,7 +494,7 @@ public partial class GameBoard : Node2D
 
          int movingTilesRemainingThisRound = 0;
          int movingTilesRemainingInTotal = 0;
-         IEnumerable<TileMoveRequest> movingTilesInRound = null;
+         IEnumerable<TileAnimationRequest> movingTilesInRound = null;
 
          movingTilesInRound = _movingTiles.Where(r => r.RoundMoved == ProcessingRound);
          DebugLogger.Instance.Log($"\t\tHandleTileMoveAnimationFinished (round {ProcessingRound}) {movingTilesInRound.Count()} left moving in this round, {_movingTiles.Count} remain in total.", LogLevel.Trace);
@@ -489,7 +504,7 @@ public partial class GameBoard : Node2D
 
             DebugLogger.Instance.Log($"\t\t\tHandleTileMoveAnimationFinished (round {ProcessingRound}) {remainingMoveRequestsThisRound} moving tiles in this round remaining.", LogLevel.Trace);
 
-            TileMoveRequest requestToRemove = null;
+            TileAnimationRequest requestToRemove = null;
             _movingTiles.TryTake(out requestToRemove);
             if (requestToRemove != null)
             {
@@ -829,7 +844,8 @@ public partial class GameBoard : Node2D
 
             // Put the tile back in the pool for availability.
             DebugLogger.Instance.Log($"\tFlagging tile for recycling after the move ends.", LogLevel.Trace);
-            tile.TileRef.SetRecyclePostMove();
+            tile.TileRef.RecyclePostMove = true;
+            RequestTileAnimate(tile.TileRef, tile.TileRef.Row, tile.TileRef.Column, round, TileAnimationRequest.AnimationType.Recycling);
 
             // Remove the tile from the game board grid.
             DebugLogger.Instance.Log($"\tSetting [{tile.Row}, {tile.Column}] to null", LogLevel.Trace);
@@ -886,60 +902,85 @@ public partial class GameBoard : Node2D
    }
 
    /// <summary>
-   /// Requests the tile to move to the specified row, column.
+   /// Requests the tile to animate and move to the specified row, column.
    /// </summary>
    /// <param name="tile"></param>
    /// <param name="row"></param>
    /// <param name="column"></param>
    /// <param name="round"></param>
-   /// <param name="freshPull"></param>
-   private void RequestTileMove(Tile tile, int row, int column, int round, bool freshPull)
+   /// <param name="animationType"></param>
+   private void RequestTileAnimate(Tile tile, int row, int column, int round, TileAnimationRequest.AnimationType animationType)
    {
       if (State == GameBoardState.ProcessingTurn)
       {
-         TileMoveRequest moveRequest = new TileMoveRequest()
+         // This is used by multiple animation types, so instantiate it once.
+         TileAnimationRequest baseRequest = new TileAnimationRequest()
          {
             Tile = tile,
             Row = row,
             Column = column,
             RoundMoved = round,
-            AnimateRecycled = tile.RecyclePostMove,
-            Type = TileMoveRequest.MoveType.Animated
+            Type = TileAnimationRequest.AnimationType.Animated
          };
 
-         if (freshPull)
+         switch (animationType)
          {
-            // This is a fresh pull. Move the tile into a droppable position first.
-            DebugLogger.Instance.Log($"RequestTileMove() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Round: {round}, Type: Static", LogLevel.Trace);
+            case TileAnimationRequest.AnimationType.Static:
+               {
+                  // This is a fresh pull. Move the tile into a droppable position first, followed by the move request.
+                  DebugLogger.Instance.Log($"RequestTileAnimate() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Round: {round}, Type: Static", LogLevel.Trace);
 
-            TileMoveRequest prepareRequest = new TileMoveRequest()
-            {
-               Tile = tile,
-               Row = row,
-               Column = column,
-               RoundMoved = round,
-               AnimateRecycled = false,
-               Type = TileMoveRequest.MoveType.Static
-            };
+                  TileAnimationRequest prepareRequest = new TileAnimationRequest()
+                  {
+                     Tile = tile,
+                     Row = row,
+                     Column = column,
+                     RoundMoved = round,
+                     Type = TileAnimationRequest.AnimationType.Static
+                  };
 
-            _moveRequests.Add(prepareRequest);
-            DebugLogger.Instance.Log($"RequestTileMove() A adding prepareRequest for {prepareRequest.ToString()}", LogLevel.Info);
+                  _moveRequests.Add(prepareRequest);
+                  DebugLogger.Instance.Log($"RequestTileAnimate() A adding prepareRequest for {prepareRequest.ToString()}", LogLevel.Info);
 
-            _moveRequests.Add(moveRequest);
-            DebugLogger.Instance.Log($"RequestTileMove() B adding moveRequest for {moveRequest.ToString()}", LogLevel.Info);
-         }
-         else
-         {
-            DebugLogger.Instance.Log($"RequestTileMove() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Round: {round}, Type: Animated", LogLevel.Trace);
+                  _moveRequests.Add(baseRequest);
+                  DebugLogger.Instance.Log($"RequestTileAnimate() B adding moveRequest for {baseRequest.ToString()}", LogLevel.Info);
+               }
+               break;
 
-            _moveRequests.Add(moveRequest);
-            DebugLogger.Instance.Log($"RequestTileMove() C adding moveRequest for {moveRequest.ToString()}", LogLevel.Info);
+            case TileAnimationRequest.AnimationType.Animated:
+               {
+                  DebugLogger.Instance.Log($"RequestTileAnimate() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Round: {round}, Type: Animated", LogLevel.Trace);
+
+                  _moveRequests.Add(baseRequest);
+
+                  DebugLogger.Instance.Log($"RequestTileAnimate() C adding moveRequest for {baseRequest.ToString()}", LogLevel.Trace);
+               }
+               break;
+
+            case TileAnimationRequest.AnimationType.Recycling:
+               {
+                  // This tile will be recycling after the move ends, so animate it differently from a move.
+                  DebugLogger.Instance.Log($"RequestTileAnimate() {tile.ToString()} recycling.", LogLevel.Trace);
+
+                  baseRequest.Type = TileAnimationRequest.AnimationType.Recycling;
+                  _moveRequests.Add(baseRequest);
+
+                  DebugLogger.Instance.Log($"RequestTileAnimate() A adding prepareRequest for {baseRequest.ToString()}", LogLevel.Trace);
+               }
+               break;
          }
       }
       else
       {
-         // Just directly move the tile into position. Largely used by the initial generation of the board.
-         tile.MoveTile(this, new TileMoveRequest() { Tile = tile, Row = row, Column = column, Type = TileMoveRequest.MoveType.Static });
+         if (tile.RecyclePostMove)
+         {
+            tile.Hide();
+         }
+         else
+         {
+            // Just directly move the tile into position. Largely used by the initial generation of the board.
+            tile.MoveTile(this, new TileAnimationRequest() { Tile = tile, Row = row, Column = column, Type = TileAnimationRequest.AnimationType.Static });
+         }
       }
    }
 
@@ -968,8 +1009,8 @@ public partial class GameBoard : Node2D
          {
             // Visually slide this tile down.
             DebugLogger.Instance.Log($"\t\tMove [{aboveRow}, {column}]({(int)higherTile.CurrentGemType}) down", LogLevel.Trace);
-            
-            RequestTileMove(higherTile, row, column, round, false);
+
+            RequestTileAnimate(higherTile, row, column, round, TileAnimationRequest.AnimationType.Animated);
             compressed = true;
 
             // Swap the data between grid slots to shift the non-null slot into the null.
@@ -1079,7 +1120,7 @@ public partial class GameBoard : Node2D
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
          tile.UpdateCoordinates(row, column);
          tile.SetGemType((Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized));
-         RequestTileMove(tile, row, column, round, true);
+         RequestTileAnimate(tile, row, column, round, TileAnimationRequest.AnimationType.Static);
       }
 
       _gameBoard[row, column] = tile;
@@ -1225,8 +1266,8 @@ public partial class GameBoard : Node2D
    // List of tiles currently being moved. Once they are done animating,
    // they are removed from the list. If all tiles are removed, that is when
    // the game board can process input again.
-   private BlockingCollection<TileMoveRequest> _movingTiles = new BlockingCollection<TileMoveRequest>();
-   private BlockingCollection<TileMoveRequest> _moveRequests = new BlockingCollection<TileMoveRequest>();
+   private BlockingCollection<TileAnimationRequest> _movingTiles = new BlockingCollection<TileAnimationRequest>();
+   private BlockingCollection<TileAnimationRequest> _moveRequests = new BlockingCollection<TileAnimationRequest>();
 
    // Manager for this game board's animated points pool.
    private AnimatedPointsManager _animatedPointsManager = null;
@@ -1245,7 +1286,7 @@ public partial class GameBoard : Node2D
    private Tile _secondarySelection;
 
    // The previously processed request. Used to determine if the current request was handled as an animated move following a static move.
-   private TileMoveRequest _previouslyProcessedRequest = null;
+   private TileAnimationRequest _previouslyProcessedRequest = null;
 
    // Random number generator.
    private System.Random _rngesus;

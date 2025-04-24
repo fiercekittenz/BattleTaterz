@@ -61,7 +61,7 @@ public partial class Tile : Node2D
    /// <summary>
    /// Indicates if this tile needs to be recycled post-move or not.
    /// </summary>
-   public bool RecyclePostMove { get; private set; } = false;
+   public bool RecyclePostMove { get; set; } = false;
 
    /// <summary>
    /// An event that can be listened to for mouse input to the tile.
@@ -138,12 +138,6 @@ public partial class Tile : Node2D
       SetProcess(true);
    }
 
-   public void SetRecyclePostMove()
-   {
-      RecyclePostMove = true;
-      Hide();
-   }
-
    /// <summary>
    /// Clears current gem and coordinate information and sets the tile as available to the tile pool.
    /// </summary>
@@ -166,11 +160,45 @@ public partial class Tile : Node2D
    }
 
    /// <summary>
+   /// Animates the recycling of the tile.
+   /// </summary>
+   /// <param name="gameBoard"></param>
+   /// <param name="request"></param>
+   public void AnimateRecycle(GameBoard gameBoard, TileAnimationRequest request)
+   {
+      IsAnimating = true;
+
+      var tween = GetTree().CreateTween();
+      tween.SetProcessMode(Tween.TweenProcessMode.Physics);
+      tween.SetParallel(true);
+      tween.TweenProperty(this, "modulate:a", 0.0f, 0.1f).SetEase(Tween.EaseType.In);
+
+      //TODO - play a sound for recycling, animate a poof?
+      //if (Globals.RNGesus.Next(0, 10) % 3 == 0)
+      //{
+      //   int dropSoundId = Globals.RNGesus.Next(1, 3);
+      //   var dropSound = gameBoard.GetParent<GameScene>().AudioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
+      //   dropSound?.Play();
+      //}
+
+      tween.Finished += (() =>
+      {
+         // Clean up and let the GameBoard know that this tile is done animating.
+         tween.Kill();
+
+         DebugLogger.Instance.Log($"\tAnimateRecycle() {Name} finished animating ({Row}, {Column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
+
+         IsAnimating = false;
+         gameBoard.HandleTileMoveAnimationFinished(request);
+      });
+   }
+
+   /// <summary>
    /// Places the tile above the column where it will drop in from.
    /// </summary>
    /// <param name="gameBoard"></param>
    /// <param name="request"></param>
-   public void PrepareForDrop(GameBoard gameBoard, TileMoveRequest request)
+   public void PrepareForDrop(GameBoard gameBoard, TileAnimationRequest request)
    {
       // This is a freshly generated tile. It won't have a position yet, so the
       // start position needs to be above the column it'll drop from.
@@ -180,7 +208,7 @@ public partial class Tile : Node2D
       Modulate = new Godot.Color(Modulate.R, Modulate.G, Modulate.B, 0.0f);
       Position = new Godot.Vector2((request.Column * Globals.TileSize) + Globals.TileGridOffset, (Globals.TileSize + Globals.TileGridOffset) * -1);
 
-      DebugLogger.Instance.Log($"\t{Name} is freshly positioned above column {request.Column} for drop: {Position.ToString()}", LogLevel.Info);
+      DebugLogger.Instance.Log($"\tPrepareForDrop() {Name} is freshly positioned above column {request.Column} for drop: {Position.ToString()}", LogLevel.Info);
 
       IsAnimating = false;
       gameBoard.HandleTileMoveAnimationFinished(request);
@@ -192,7 +220,7 @@ public partial class Tile : Node2D
    /// it is possible for the Tile to be removed from the tree while animating.
    /// </summary>
    /// <param name="gameBoard"></param>
-   public void MoveTile(GameBoard gameBoard, TileMoveRequest request)
+   public void MoveTile(GameBoard gameBoard, TileAnimationRequest request)
    {
       DebugLogger.Instance.Log($"{Name} move from [{Row}, {Column}] to [{request.Row}, {request.Column}] begin...", LogLevel.Trace);
 
@@ -201,13 +229,13 @@ public partial class Tile : Node2D
       Godot.Vector2 newPosition = new Godot.Vector2((request.Column * Globals.TileSize) + Globals.TileGridOffset,
                                                     (request.Row * Globals.TileSize) + Globals.TileGridOffset);
 
-      DebugLogger.Instance.Log($"\t{Name} new position = {newPosition.ToString()}", LogLevel.Trace);
+      DebugLogger.Instance.Log($"\tMoveTile() {Name} new position = {newPosition.ToString()}", LogLevel.Trace);
 
-      if (request.Type == TileMoveRequest.MoveType.Animated)
+      if (request.Type == TileAnimationRequest.AnimationType.Animated)
       {
          IsAnimating = true;
 
-         DebugLogger.Instance.Log($"\t{Name} animate moving from ({Position.ToString()}) to ({newPosition.ToString()}).", LogLevel.Trace);
+         DebugLogger.Instance.Log($"\tMoveTile() {Name} animate moving from ({Position.ToString()}) to ({newPosition.ToString()}).", LogLevel.Trace);
 
          if (!Visible)
          {
@@ -217,16 +245,7 @@ public partial class Tile : Node2D
          var tween = GetTree().CreateTween();
          tween.SetProcessMode(Tween.TweenProcessMode.Physics);
          tween.SetParallel(true);
-
-         if (request.AnimateRecycled)
-         {
-            tween.TweenProperty(this, "modulate:a", 0.0f, 0.1f).SetEase(Tween.EaseType.In);
-         }
-         else
-         {
-            tween.TweenProperty(this, "modulate:a", 1.0f, 0.1f).SetEase(Tween.EaseType.In);
-         }
-
+         tween.TweenProperty(this, "modulate:a", 1.0f, 0.1f).SetEase(Tween.EaseType.In);
          tween.TweenProperty(this, "position", newPosition, 0.4f).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Spring).From(Position);
 
          if (Globals.RNGesus.Next(0, 10) % 3 == 0)
@@ -241,7 +260,7 @@ public partial class Tile : Node2D
             // Clean up and let the GameBoard know that this tile is done animating.
             tween.Kill();
 
-            DebugLogger.Instance.Log($"\t{Name} finished animating ({Row}, {Column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
+            DebugLogger.Instance.Log($"\tMoveTile() {Name} finished animating ({Row}, {Column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
 
             IsAnimating = false;
             gameBoard.HandleTileMoveAnimationFinished(request);
@@ -249,7 +268,7 @@ public partial class Tile : Node2D
       }
       else
       {
-         DebugLogger.Instance.Log($"\t{Name} just set position from ({Position.ToString()}) to ({newPosition.ToString()}).", LogLevel.Trace);
+         DebugLogger.Instance.Log($"\tMoveTile() {Name} just set position from ({Position.ToString()}) to ({newPosition.ToString()}).", LogLevel.Trace);
          Position = newPosition;
          Show();
 

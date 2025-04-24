@@ -32,6 +32,9 @@ namespace BattleTaterz.Core.Gameplay
 
       #region Public Methods
 
+      /// <summary>
+      /// Initializes the tile pool. Can only be done once.
+      /// </summary>
       public void Initialize()
       {
          if (!_initialized)
@@ -48,11 +51,19 @@ namespace BattleTaterz.Core.Gameplay
          }
       }
 
+      /// <summary>
+      /// Game loop processing of the tile pool.
+      /// </summary>
+      /// <param name="delta"></param>
       public override void _Process(double delta)
       {
          //TODO - handle any clean-up of tiles that aren't in use and exceed the max pool size.
       }
 
+      /// <summary>
+      /// Yoinks an available tile from the pool.
+      /// </summary>
+      /// <returns></returns>
       public Tile Pull()
       {
          // Track the amount of time it takes to find an available tile. If it exceeds the max time allowed,
@@ -62,7 +73,7 @@ namespace BattleTaterz.Core.Gameplay
          Tile tile = null;
          while (tile == null)
          {
-            tile = _tilePool.Where(t => t.IsAvailable && !t.RecyclePostMove).FirstOrDefault();
+            tile = _tilePool.Where(t => t.IsAvailable).FirstOrDefault();
             if (tile == null && DateTime.Now.Subtract(startTime).TotalMilliseconds > MaximumWaitInMs)
             {
                DebugLogger.Instance.Log($"The tile pool has exceeded the maximum number of seconds ({MaximumWaitInMs}) allowed. Creating a new tile for the pool.", LogLevel.Info);
@@ -76,6 +87,9 @@ namespace BattleTaterz.Core.Gameplay
          return tile;
       }
 
+      /// <summary>
+      /// Recycles all tiles marked for recycling. Should only be done when a move is finished processing.
+      /// </summary>
       public void DoRecycle()
       {
          foreach (var tile in _tilePool)
@@ -91,6 +105,11 @@ namespace BattleTaterz.Core.Gameplay
 
       #region Private Methods
 
+      /// <summary>
+      /// Instantiates a new tile node.
+      /// </summary>
+      /// <returns></returns>
+      /// <exception cref="Exception"></exception>
       private Tile CreateTile()
       {
          Tile tile = GD.Load<PackedScene>("res://GameObjectResources/Grid/Tile.tscn").Instantiate<Tile>();
