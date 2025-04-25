@@ -24,8 +24,3 @@ window/size/resizable=false
 [dotnet]
 
 project/assembly_name="BattleTaterz"
-
-[rendering]
-
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"

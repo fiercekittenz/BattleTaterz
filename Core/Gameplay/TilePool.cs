@@ -34,6 +34,11 @@ namespace BattleTaterz.Core.Gameplay
       /// </summary>
       public static int CleanUpTimeInMinutes = 5;
 
+      /// <summary>
+      /// The maximum number of special tiles that are allowed on the board at any given time.
+      /// </summary>
+      public static int MaxSpecials = 3;
+
       #endregion
 
       #region Public Methods
@@ -66,7 +71,7 @@ namespace BattleTaterz.Core.Gameplay
          // Perform periodic clean-up of excess objects in the pool.
          if (DateTime.Now.Subtract(_lastCleanUpTime).TotalMinutes > CleanUpTimeInMinutes && _tilePool.Count > PoolSize)
          {
-            var unusedTiles = _tilePool.Where(t => t.IsAvailable).DefaultIfEmpty().ToList();
+            var unusedTiles = _tilePool.Where(t => t.IsAvailable)?.ToList<Tile>();
             if (unusedTiles != null && unusedTiles.Any())
             {
                int overflowAmount = _tilePool.Count - PoolSize;
@@ -102,7 +107,7 @@ namespace BattleTaterz.Core.Gameplay
          Tile tile = null;
          while (tile == null)
          {
-            tile = _tilePool.Where(t => t.IsAvailable).DefaultIfEmpty().First();
+            tile = _tilePool.Where(t => t.IsAvailable)?.First();
             if (tile == null && DateTime.Now.Subtract(startTime).TotalMilliseconds > MaximumWaitInMs)
             {
                DebugLogger.Instance.Log($"The tile pool has exceeded the maximum number of seconds ({MaximumWaitInMs}) allowed. Creating a new tile for the pool.", LogLevel.Info);
@@ -113,6 +118,10 @@ namespace BattleTaterz.Core.Gameplay
 
          // Tile pulled. Flag it as unavailable and return.
          tile.MarkUnavailable();
+
+         // Assign behavior to the tile.
+         SetTileBehavior(tile);
+
          return tile;
       }
 
@@ -151,10 +160,33 @@ namespace BattleTaterz.Core.Gameplay
          tile.Name = $"Tile{Guid.NewGuid()}";
          tile.OwningBoard = _parentBoardRef;
          tile.GlobalPosition = new Godot.Vector2(-1, -1);
+
          _tilePool.Add(tile);
          _parentBoardRef.AddChild(tile);
 
          return tile;
+      }
+
+      /// <summary>
+      /// Responsible for setting a tile's behavior.
+      /// Behavior defines the effect of the tile on gameplay. There is a maximum number of "special"
+      /// tiles that can be on the board at any given time. Some will have positive behavior while 
+      /// others will have negative behavior.
+      /// </summary>
+      /// <param name="tile"></param>
+      private void SetTileBehavior(Tile tile)
+      {
+         var activeSpecials = _tilePool.Where(t => !t.IsAvailable && t.Behavior > BehaviorMode.None)?.ToList<Tile>();
+         if (activeSpecials.Count() < MaxSpecials)
+         {
+            //TODO this is a really REALLY simplistic way of determining chance of spawning a double point tile.
+            int doublePointsChance = Globals.RNGesus.Next(0, (int)SpecialRate.DoublePoints);
+            if (doublePointsChance == 0)
+            {
+               tile.Behavior = BehaviorMode.DoublePoints;
+               tile.ChangeBorder(TileBorder.DoublePoints);
+            }
+         }
       }
 
       #endregion

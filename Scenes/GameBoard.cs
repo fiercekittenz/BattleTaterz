@@ -59,7 +59,6 @@ public partial class GameBoard : Node2D
    /// </summary>
    public override void _Ready()
    {
-      DebugLogger.Instance.Enabled = false;//TODO temporary, remove
       DebugLogger.Instance.Log($"GameBoard [TODO player id] has entered the node tree.", LogLevel.Info);
 
       // Cache specific nodes.
@@ -78,7 +77,7 @@ public partial class GameBoard : Node2D
       _rngesus = new Random(Guid.NewGuid().GetHashCode());
 
       // Create the animated points pool.
-      _animatedPointsManager = new AnimatedPointsManager(GetNode<Node2D>("AnimatedPointPool"), Globals.AnimatedPointPoolSize);
+      _animatedPointPool = GetNode<AnimatedPointPool>("AnimatedPointPool");
 
       // Generate the initial board.
       DebugLogger.Instance.Enabled = false;
@@ -96,7 +95,6 @@ public partial class GameBoard : Node2D
 
       // Log the starting game board.
       DebugLogger.Instance.LogGameBoard("Initial Game Board", Globals.TileCount, ref _gameBoard, LogLevel.Info);
-      DebugLogger.Instance.Enabled = true;//TODO temporary, remove
    }
 
    /// <summary>
@@ -185,8 +183,6 @@ public partial class GameBoard : Node2D
    /// </summary>
    public bool Generate()
    {
-      DebugLogger.Instance.Enabled = false;//TODO temporary, remove
-
       // Make the whole board invisible until we are done.
       Hide();
 
@@ -234,8 +230,6 @@ public partial class GameBoard : Node2D
          boardReadySound?.Play();
       }
 
-      DebugLogger.Instance.Enabled = true;//TODO temporary, remove
-
       // The game's afoot!
       return true;
    }
@@ -271,14 +265,12 @@ public partial class GameBoard : Node2D
    {
       if (_primarySelection != null)
       {
-         var border = _primarySelection.GetNode<AnimatedSprite2D>("Border");
-         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
+         _primarySelection.ResetBorderToBehaviorDefault();
       }
 
       if (_secondarySelection != null)
       {
-         var border = _secondarySelection.GetNode<AnimatedSprite2D>("Border");
-         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
+         _secondarySelection.ResetBorderToBehaviorDefault();
       }
    }
 
@@ -287,17 +279,7 @@ public partial class GameBoard : Node2D
    /// </summary>
    public void ClearSelection()
    {
-      if (_primarySelection != null)
-      {
-         var border = _primarySelection.GetNode<AnimatedSprite2D>("Border");
-         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
-      }
-
-      if (_secondarySelection != null)
-      {
-         var border = _secondarySelection.GetNode<AnimatedSprite2D>("Border");
-         border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
-      }
+      ClearTileBorders();
 
       _primarySelection = null;
       _secondarySelection = null;
@@ -833,7 +815,8 @@ public partial class GameBoard : Node2D
             var scoreUpdateResults = Score.IncreaseScore(match, round);
             DebugLogger.Instance.Log($"HandleMatches(round {round}) scoreUpdateResults (BasePoints = {scoreUpdateResults.BasePoints}) (Bonus = {scoreUpdateResults.BonusPointsRewarded})", LogLevel.Info);
 
-            _animatedPointsManager.Play(match.GlobalPositionAverage, scoreUpdateResults);
+            //TODO this isn't always triggering, especially when there are subsequent rounds of matches. [BUG]
+            _animatedPointPool.Play(match.GlobalPositionAverage, scoreUpdateResults);
             _uiNode.GetNode<Godot.Label>("Labels/ScoreValueLabel").Text = scoreUpdateResults.UpdatedScore.ToString("N0");
          }
 
@@ -1136,8 +1119,7 @@ public partial class GameBoard : Node2D
                   {
                      if (tile != _primarySelection && tile != _secondarySelection)
                      {
-                        var border = tile.GetNode<AnimatedSprite2D>("Border");
-                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_hover.tres");
+                        tile.ChangeBorder(TileBorder.Hovered);
                      }
                   }
                   break;
@@ -1145,8 +1127,7 @@ public partial class GameBoard : Node2D
                   {
                      if (tile != _primarySelection && tile != _secondarySelection)
                      {
-                        var border = tile.GetNode<AnimatedSprite2D>("Border");
-                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_default.tres");
+                        tile.ResetBorderToBehaviorDefault();
                      }
                   }
                   break;
@@ -1182,9 +1163,7 @@ public partial class GameBoard : Node2D
 
                      if (selectionMade)
                      {
-                        var border = tile.GetNode<AnimatedSprite2D>("Border");
-                        border.SpriteFrames = GD.Load<SpriteFrames>($"res://GameObjectResources/Grid/border_selected.tres");
-
+                        tile.ChangeBorder(TileBorder.Selected);
                         selectionSound.Play();
                      }
 
@@ -1255,7 +1234,7 @@ public partial class GameBoard : Node2D
    private BlockingCollection<TileAnimationRequest> _moveRequests = new BlockingCollection<TileAnimationRequest>();
 
    // Manager for this game board's animated points pool.
-   private AnimatedPointsManager _animatedPointsManager = null;
+   private AnimatedPointPool _animatedPointPool = null;
 
    // Manager for a pool of avaialble tile objects.
    private TilePool _tilePool = null;

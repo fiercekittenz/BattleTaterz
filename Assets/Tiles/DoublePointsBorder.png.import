@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bqee2bi3t6b1w"
-path="res://.godot/imported/selectorA.png-659008246e73fad5f163f15c035bbdbb.ctex"
+uid="uid://c6viwql3s62l1"
+path="res://.godot/imported/DoublePointsBorder.png-1b6fe854e0a62126e5867a8fc84252da.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Tiles/selectorA.png"
-dest_files=["res://.godot/imported/selectorA.png-659008246e73fad5f163f15c035bbdbb.ctex"]
+source_file="res://Assets/Tiles/DoublePointsBorder.png"
+dest_files=["res://.godot/imported/DoublePointsBorder.png-1b6fe854e0a62126e5867a8fc84252da.ctex"]
 
 [params]
 

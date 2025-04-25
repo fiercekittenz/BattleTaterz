@@ -48,7 +48,7 @@ public partial class CloudManager : Node2D
       // Perform periodic clean-up of excess objects in the pool.
       if (DateTime.Now.Subtract(_lastCleanUpTime).TotalMinutes > CleanUpTimeInMinutes && _cloudPool.Count > PoolSize)
       {
-         var unusedClouds = _cloudPool.Where(t => t.IsAvailable).DefaultIfEmpty().ToList();
+         var unusedClouds = _cloudPool.Where(t => t.IsAvailable)?.ToList();
          if (unusedClouds != null && unusedClouds.Any())
          {
             int overflowAmount = _cloudPool.Count - PoolSize;
@@ -133,12 +133,10 @@ public partial class CloudManager : Node2D
       int spawnChance = Globals.RNGesus.Next(0, 4);
       if (spawnChance % 3 == 0)
       {
-         //TODO - this should be happening in the Process() method, so that it's timed with the game loop (frames). 
-         //       Doing it here risks the game locking up or appearing like it's hitching.
          AnimatedCloud cloud = null;
          while (cloud == null)
          {
-            cloud = _cloudPool.Where(c => c.IsAvailable).DefaultIfEmpty().First();
+            cloud = _cloudPool.Where(c => c.IsAvailable)?.First();
             if (cloud == null && DateTime.Now.Subtract(startTime).TotalMilliseconds > MaximumWaitInMs)
             {
                DebugLogger.Instance.Log($"The cloud pool has exceeded the maximum number of seconds ({MaximumWaitInMs}) allowed. Creating a new tile for the pool.", LogLevel.Info);

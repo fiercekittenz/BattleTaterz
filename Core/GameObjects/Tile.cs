@@ -35,6 +35,11 @@ public partial class Tile : Node2D
    public bool MouseEventHandlerRegistered { get; set; } = false;
 
    /// <summary>
+   /// Describes the behavior of this tile as it pertains to gameplay.
+   /// </summary>
+   public BattleTaterz.Core.Enums.BehaviorMode Behavior { get; set; } = BehaviorMode.None;
+
+   /// <summary>
    /// Accessor for the current gem type assigned to this tile.
    /// </summary>
    public Gem.GemType CurrentGemType
@@ -86,6 +91,10 @@ public partial class Tile : Node2D
       _gem.SetGemType((Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized));
       _gem.Position = new Godot.Vector2(0, 0);
       _gem.OnGemMouseEvent += _gem_OnGemMouseEvent;
+
+      _border = GetNode<AnimatedSprite2D>("Border");
+      _border.SpriteFrames = GD.Load<SpriteFrames>("res://GameObjectResources/Grid/tile_borders.tres");
+      ChangeBorder(TileBorder.Default);
    }
 
    /// <summary>
@@ -114,6 +123,36 @@ public partial class Tile : Node2D
       DebugLogger.Instance.Log($"{Name} changing gem type from [{(int)CurrentGemType}] to [{(int)gemType}].", LogLevel.Trace);
 
       _gem.SetGemType(gemType);
+   }
+
+   /// <summary>
+   /// Changes the border of the tile to the appropriate sprite frame.
+   /// </summary>
+   /// <param name="borderType"></param>
+   public void ChangeBorder(TileBorder borderType)
+   {
+      _border.Frame = (int)borderType;
+   }
+
+   /// <summary>
+   /// Resets the border to the appropriate sprite for the tile's behavior.
+   /// </summary>
+   public void ResetBorderToBehaviorDefault()
+   {
+      switch (Behavior)
+      {
+         case BehaviorMode.None:
+            _border.Frame = (int)TileBorder.Default;
+            break;
+
+         case BehaviorMode.DoublePoints:
+            _border.Frame = (int)TileBorder.DoublePoints;
+            break;
+
+         default:
+            _border.Frame = (int)TileBorder.Default;
+            break;
+      }
    }
 
    /// <summary>
@@ -155,6 +194,8 @@ public partial class Tile : Node2D
       _gem.SetGemType(Gem.GemType.UNKNOWN);
       _wasPreparedFromPull = false;
       IsAvailable = true;
+      Behavior = BehaviorMode.None;
+      ChangeBorder(TileBorder.Default);
       RecyclePostMove = false;
 
       // Halt processing in the scene graph for this node while it isn't in use.
@@ -310,6 +351,8 @@ public partial class Tile : Node2D
    #region Private Members
 
    private Gem _gem;
+
+   private AnimatedSprite2D _border;
 
    /// <summary>
    /// Denotes if the tile was prepared from a fresh pull. This means the tile has been

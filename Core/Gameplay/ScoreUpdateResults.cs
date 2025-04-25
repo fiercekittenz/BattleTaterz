@@ -18,13 +18,16 @@ namespace BattleTaterz.Core.Gameplay
 
       public int BonusPointsRewarded { get; private set; } = 0;
 
+      public int SpecialPoints { get; private set; } = 0;
+
       public ScoreChangeType ChangeType { get; private set; } = ScoreChangeType.Increase;
 
-      public ScoreUpdateResults(int updatedScore, int basePoints, int bonusPointsRewarded, ScoreChangeType changeType)
+      public ScoreUpdateResults(int updatedScore, int basePoints, int bonusPointsRewarded, int specialPoints, ScoreChangeType changeType)
       {
          UpdatedScore = updatedScore;
          BasePoints = basePoints;
          BonusPointsRewarded = bonusPointsRewarded;
+         SpecialPoints = specialPoints;
          ChangeType = changeType;
       }
 

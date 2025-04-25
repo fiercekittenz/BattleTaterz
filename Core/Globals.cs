@@ -15,11 +15,6 @@ namespace BattleTaterz.Core
       public static int MinimumMatchCount = 3;
 
       /// <summary>
-      /// The number of animated points that should be kept ready in the pool.
-      /// </summary>
-      public static int AnimatedPointPoolSize = 20;
-
-      /// <summary>
       /// The size, in pixels, of the tiles on the board.
       /// </summary>
       public static int TileSize = 70;

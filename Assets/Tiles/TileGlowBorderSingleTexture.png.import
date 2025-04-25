@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://o0l0u4edvcqg"
-path="res://.godot/imported/selectorB.png-e13e89f3a1fd34537726de74643bff0f.ctex"
+uid="uid://meybsbc02gxm"
+path="res://.godot/imported/TileGlowBorderSingleTexture.png-5e725e3c8e81e67c8250103201e9551f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Tiles/selectorB.png"
-dest_files=["res://.godot/imported/selectorB.png-e13e89f3a1fd34537726de74643bff0f.ctex"]
+source_file="res://Assets/Tiles/TileGlowBorderSingleTexture.png"
+dest_files=["res://.godot/imported/TileGlowBorderSingleTexture.png-5e725e3c8e81e67c8250103201e9551f.ctex"]
 
 [params]
 
