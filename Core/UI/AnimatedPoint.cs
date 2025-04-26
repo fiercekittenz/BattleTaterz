@@ -1,4 +1,5 @@
 ﻿using BattleTaterz.Core.Gameplay;
+using BattleTaterz.Core.System;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace BattleTaterz.Core.UI
 {
-   public partial class AnimatedPoint : Node2D
+   public partial class AnimatedPoint : PoolObject
    {
       #region Properties
 
@@ -17,11 +18,6 @@ namespace BattleTaterz.Core.UI
       /// The point value to be displayed.
       /// </summary>
       public int DisplayValue { get; set; } = 0;
-
-      /// <summary>
-      /// Is this AnimatedPoint available for use?
-      /// </summary>
-      public bool IsAvailable { get; set; } = true;
 
       #endregion
 
@@ -45,14 +41,6 @@ namespace BattleTaterz.Core.UI
       }
 
       /// <summary>
-      /// Called every frame. 'delta' is the elapsed time since the previous frame.
-      /// </summary>
-      /// <param name="delta"></param>
-      public override void _Process(double delta)
-      {
-      }
-
-      /// <summary>
       /// Claims the node as in-use and animates the label to display for some period of time before
       /// it can be made available again to the pool.
       /// </summary>
@@ -60,9 +48,6 @@ namespace BattleTaterz.Core.UI
       /// <param name="value"></param>
       public void Animate(Godot.Vector2 globalPosition, ScoreUpdateResults scoreUpdate)
       {
-         // Halt availability.
-         IsAvailable = false;
-
          // Format the display text.
          string displayText = scoreUpdate.BasePoints.ToString();
          if (scoreUpdate.ChangeType == Enums.ScoreChangeType.Increase && (scoreUpdate.BonusPointsRewarded > 0 || scoreUpdate.SpecialPoints > 0))
@@ -89,7 +74,7 @@ namespace BattleTaterz.Core.UI
             // Clean up!
             tween.Kill();
             Hide();
-            IsAvailable = true;
+            Recycle();
          });
       }
 

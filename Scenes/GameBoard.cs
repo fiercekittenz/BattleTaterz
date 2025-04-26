@@ -69,15 +69,16 @@ public partial class GameBoard : Node2D
       _tilePool = GetNode<TilePool>("TilePool");
       _tilePool.Initialize();
 
+      // Create the animated points pool.
+      _animatedPointPool = GetNode<AnimatedPointPool>("AnimatedPointPool");
+      _animatedPointPool.Initialize();
+
       // Setup the timer.
       _moveTimerLabel = _uiNode.GetNode<MoveTimerLabel>("Labels/MoveTimerLabel");
       _moveTimerLabel.OnTimerFinished += _moveTimerLabel_OnTimerFinished;
 
       // Create RNGesus
       _rngesus = new Random(Guid.NewGuid().GetHashCode());
-
-      // Create the animated points pool.
-      _animatedPointPool = GetNode<AnimatedPointPool>("AnimatedPointPool");
 
       // Generate the initial board.
       DebugLogger.Instance.Enabled = false;
