@@ -49,8 +49,8 @@ public partial class GameScene : Node2D
       _audioNode = GetNode<Node2D>("Audio");
 
       // Setup the cloud manager.
-      _cloudManager = GetNode<Node2D>("Background").GetNode<CloudManager>("CloudManager");
-      _cloudManager.Initialize(this);
+      _cloudManager = GetNode<CloudManager>("CloudManager");
+      _cloudManager.Initialize();
 
       _gameBoardScene = GD.Load<PackedScene>("res://Scenes/GameBoard.tscn");
 

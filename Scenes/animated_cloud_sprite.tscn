@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://qev055ux8qhy"]
+
+[ext_resource type="SpriteFrames" uid="uid://bh2nlrw11cqln" path="res://GameObjectResources/clouds.tres" id="1_e1ug1"]
+
+[node name="AnimatedCloudSprite" type="AnimatedSprite2D"]
+sprite_frames = ExtResource("1_e1ug1")

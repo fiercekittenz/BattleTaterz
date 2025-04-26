@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://dwq1urk6jpoqr"]
+[gd_scene load_steps=27 format=3 uid="uid://dwq1urk6jpoqr"]
 
 [ext_resource type="Script" uid="uid://bb68lhat8iyfp" path="res://Scenes/GameScene.cs" id="1_gipt1"]
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
@@ -23,7 +23,6 @@
 [ext_resource type="AudioStream" uid="uid://crjywsuc7w7tw" path="res://Assets/Audio/Background_Main.mp3" id="19_bl770"]
 [ext_resource type="FontFile" uid="uid://c07nhox84jqrv" path="res://Assets/Fonts/Gelato.otf" id="19_v7xhk"]
 [ext_resource type="SpriteFrames" uid="uid://dsvk6eq5isuke" path="res://SpriteResources/logo.tres" id="21_v7xhk"]
-[ext_resource type="Script" uid="uid://dvn8px26j3261" path="res://Core/Gameplay/TilePool.cs" id="22_wukv0"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fevyy"]
 bg_color = Color(0.687731, 0.611753, 0.90921, 1)
@@ -67,14 +66,6 @@ script = ExtResource("1_gipt1")
 
 [node name="Background" type="Node2D" parent="."]
 metadata/_edit_lock_ = true
-
-[node name="CloudManager" type="Node2D" parent="Background"]
-z_index = 1
-script = ExtResource("3_pgw7i")
-
-[node name="CloudSpawnTimer" type="Timer" parent="Background/CloudManager"]
-wait_time = 2.0
-autostart = true
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Background"]
 z_as_relative = false
@@ -208,7 +199,10 @@ AudioBusName = "Master"
 position = Vector2(203, 107)
 sprite_frames = ExtResource("21_v7xhk")
 
-[node name="TilePool" type="Node2D" parent="."]
+[node name="CloudManager" type="Node2D" parent="."]
 z_index = 1
-z_as_relative = false
-script = ExtResource("22_wukv0")
+script = ExtResource("3_pgw7i")
+
+[node name="CloudSpawnTimer" type="Timer" parent="CloudManager"]
+wait_time = 2.0
+autostart = true
