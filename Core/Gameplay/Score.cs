@@ -36,18 +36,27 @@ namespace BattleTaterz.Core.Gameplay
       public ScoreUpdateResults IncreaseScore(MatchDetails matchDetails, int level)
       {
          // Give the minimum, base points per tile using the level as a modifier.
-         int basePointsGained = matchDetails.Tiles.Count * BasePointsPerTile * level;
+         // Level is 0-based, so adding one is necessary for the right math.
+         int basePointsGained = matchDetails.Tiles.Count * BasePointsPerTile * (level + 1);
 
          // Give bonus points for any tiles matched beyond the minimum 3.
          int bonusPoints = (matchDetails.Tiles.Count - Globals.MinimumMatchCount) * BonusPerAdditionalTile;
 
-         //TODO - have special bonus tiles that, when matched, give a boost to the score.
+         // Points assigned from specials, when applicable.
+         int specialPoints = 0;
+
+         // Handle double point tiles.
+         var doublePointTiles = matchDetails.Tiles.Where(t => t.TileRef.Behavior == BehaviorMode.DoublePoints)?.ToList();
+         if (doublePointTiles.Any())
+         {
+            specialPoints += (int)Math.Pow(basePointsGained + bonusPoints, doublePointTiles.Count() * 2);
+         }
 
          // Update the current score.
-         Current = Current + basePointsGained + bonusPoints;
+         Current = Current + basePointsGained + bonusPoints + specialPoints;
 
          // As a courtesy, return the updated score for UI changes.
-         return new ScoreUpdateResults(Current, basePointsGained, bonusPoints, ScoreChangeType.Increase);
+         return new ScoreUpdateResults(Current, basePointsGained, bonusPoints, specialPoints, ScoreChangeType.Increase);
       }
    }
 }

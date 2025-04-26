@@ -53,7 +53,7 @@ namespace BattleTaterz.Core.Utility
       /// <param name="logLevel"></param>
       public void Log(string text, LogLevel logLevel)
       {
-         if (_enabled && LoggingLevel <= logLevel)
+         if (Enabled && LoggingLevel <= logLevel)
          {
             using (StreamWriter stream = new StreamWriter(_logFile, true))
             {
@@ -71,7 +71,7 @@ namespace BattleTaterz.Core.Utility
       /// <param name="logLevel"></param>
       public void LogLines(string headline, List<string> lines, LogLevel logLevel)
       {
-         if (_enabled && LoggingLevel <= logLevel)
+         if (Enabled && LoggingLevel <= logLevel)
          {
             using (StreamWriter stream = new StreamWriter(_logFile, true))
             {
@@ -94,27 +94,37 @@ namespace BattleTaterz.Core.Utility
       /// <param name="logLevel"></param>
       public void LogGameBoard(string headline, int tileCount, ref Tile[,] gameBoard, LogLevel logLevel)
       {
-         if (_enabled && LoggingLevel <= logLevel)
+         if (Enabled && LoggingLevel <= logLevel)
          {
-            List<string> rows = new List<string>();
+            List<string> gems = new List<string>();
+            List<string> positions = new List<string>();
+
             for (int row = 0; row < tileCount; ++row)
             {
-               string rowText = string.Empty;
+               string gemText = string.Empty;
+               string positionText = string.Empty;
+
                for (int column = 0; column < tileCount; ++column)
                {
                   string gemValue = "*"; // assume null until proven otherwise
-                  if (gameBoard[row, column] != null && gameBoard[row, column].GemRef != null)
+                  string positionValue = "";
+
+                  if (gameBoard[row, column] != null)
                   {
-                     gemValue = $"{(int)gameBoard[row, column].GemRef.CurrentGem}";
+                     gemValue = $"{(int)gameBoard[row, column].CurrentGemType}";
+                     positionValue = $"({gameBoard[row, column].Position.X}, {gameBoard[row, column].Position.Y})";
                   }
 
-                  rowText = $"{rowText} {gemValue}";
+                  gemText = $"{gemText} {gemValue}";
+                  positionText = $"{positionText}   {positionValue}";
                }
 
-               rows.Add(rowText);
+               gems.Add(gemText);
+               positions.Add(positionText);
             }
 
-            LogLines(headline, rows, logLevel);
+            LogLines(headline, gems, logLevel);
+            LogLines(headline, positions, logLevel);
          }
       }
 
@@ -153,8 +163,6 @@ namespace BattleTaterz.Core.Utility
       private static DebugLogger _instance;
 
       private string _logFile;
-
-      private bool _enabled = true;
 
       #endregion
    }

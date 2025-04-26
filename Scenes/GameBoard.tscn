@@ -1,8 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://bso01n3chx8o3"]
+[gd_scene load_steps=7 format=3 uid="uid://bso01n3chx8o3"]
 
 [ext_resource type="Script" uid="uid://c5wl3k6ahnbjm" path="res://Scenes/GameBoard.cs" id="1_7oe7p"]
+[ext_resource type="Script" uid="uid://d0t258bnkhflr" path="res://Core/UI/AnimatedPointPool.cs" id="2_7bmm7"]
 [ext_resource type="Theme" uid="uid://uy7p5q4ssdwt" path="res://UIResources/ui_theme.tres" id="3_fkmb8"]
 [ext_resource type="Script" uid="uid://c4pm1ha6tc34e" path="res://Core/UI/MoveTimerLabel.cs" id="3_y2qi3"]
+[ext_resource type="Script" uid="uid://dvn8px26j3261" path="res://Core/Gameplay/TilePool.cs" id="5_7bmm7"]
 [ext_resource type="Texture2D" uid="uid://dag5lo7614rw7" path="res://Assets/Tiles/BoardBackground_Full.png" id="5_ontlx"]
 
 [node name="GameBoard" type="Node2D"]
@@ -13,14 +15,11 @@ top_level = true
 visibility_layer = 1048575
 z_index = 10
 z_as_relative = false
+script = ExtResource("2_7bmm7")
 
 [node name="MoveTimer" type="Timer" parent="."]
 one_shot = true
 ignore_time_scale = true
-
-[node name="Tiles" type="Node2D" parent="."]
-z_index = 2
-z_as_relative = false
 
 [node name="UI" type="VBoxContainer" parent="."]
 z_index = 2
@@ -67,3 +66,8 @@ theme_override_font_sizes/font_size = 54
 text = "0:00s"
 horizontal_alignment = 2
 script = ExtResource("3_y2qi3")
+
+[node name="TilePool" type="Node2D" parent="."]
+z_index = 2
+z_as_relative = false
+script = ExtResource("5_7bmm7")

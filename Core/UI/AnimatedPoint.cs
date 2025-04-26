@@ -32,17 +32,15 @@ namespace BattleTaterz.Core.UI
       /// </summary>
       public override void _Ready()
       {
-         Show();
+         Hide();
 
          // Create a label that will be used by this node.
          _label = new Godot.Label();
          _label.Name = $"{this.Name}Label";
          _label.GlobalPosition = new Godot.Vector2(0.0f, 0.0f);
          _label.Text = "0";
-         _label.TopLevel = true;
          _label.Theme = GD.Load<Theme>($"res://UIResources/animated_points_theme.tres");
 
-         _label.Hide();
          AddChild(_label);
       }
 
@@ -67,9 +65,10 @@ namespace BattleTaterz.Core.UI
 
          // Format the display text.
          string displayText = scoreUpdate.BasePoints.ToString();
-         if (scoreUpdate.ChangeType == Enums.ScoreChangeType.Increase && scoreUpdate.BonusPointsRewarded > 0)
+         if (scoreUpdate.ChangeType == Enums.ScoreChangeType.Increase && (scoreUpdate.BonusPointsRewarded > 0 || scoreUpdate.SpecialPoints > 0))
          {
-            displayText = $"{displayText} (+{scoreUpdate.BonusPointsRewarded.ToString()})";
+            //TODO - simple formatting to include the special points with bonus for now.
+            displayText = $"{displayText} (+{scoreUpdate.BonusPointsRewarded + scoreUpdate.SpecialPoints})";
          }
 
          // Set new values on the label and reposition it.
@@ -78,18 +77,18 @@ namespace BattleTaterz.Core.UI
          _label.Modulate = new Godot.Color(_label.Modulate.R, _label.Modulate.G, _label.Modulate.B, 1.0f);
          _label.Scale = new Godot.Vector2(1.0f, 1.0f);
          _label.ZIndex = 10;
-         _label.Show();
+         Show();
 
          // Create a tween for the label and animate it.
          var tween = GetTree().CreateTween();
          tween.SetParallel(true);
-         tween.TweenProperty(_label, "position", new Godot.Vector2(_label.Position.X, _label.Position.Y - 100), 0.5f).SetEase(Tween.EaseType.In);
-         tween.TweenProperty(_label, "modulate:a", 0.0f, 0.5f).SetEase(Tween.EaseType.In);
+         tween.TweenProperty(_label, "position", new Godot.Vector2(_label.Position.X, _label.Position.Y - 100), 1.0f).SetEase(Tween.EaseType.In);
+         tween.TweenProperty(_label, "modulate:a", 0.0f, 1.0f).SetEase(Tween.EaseType.In);
          tween.Finished += (() =>
          {
             // Clean up!
             tween.Kill();
-            _label.Hide();
+            Hide();
             IsAvailable = true;
          });
       }

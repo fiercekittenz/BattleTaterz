@@ -15,11 +15,6 @@ namespace BattleTaterz.Core
       public static int MinimumMatchCount = 3;
 
       /// <summary>
-      /// The number of animated points that should be kept ready in the pool.
-      /// </summary>
-      public static int AnimatedPointPoolSize = 20;
-
-      /// <summary>
       /// The size, in pixels, of the tiles on the board.
       /// </summary>
       public static int TileSize = 70;
@@ -30,10 +25,16 @@ namespace BattleTaterz.Core
       public static int TileCount = 9;
 
       /// <summary>
+      /// The number of pixels needed to offset the tile slightly to fit into the center of
+      /// its grid location.
+      /// </summary>
+      public static float TileGridOffset = (Globals.TileSize / 2) + 10;
+
+      /// <summary>
       /// The maximum number of hype levels for multiple cascading matches. There can be many more than this, but 
       /// this value restricts the number of sounds played.
       /// </summary>
-      public static int MaxHypeLevel = 3;
+      public static int MaxHypeLevel = 5;
 
       /// <summary>
       /// RNGesus engine.

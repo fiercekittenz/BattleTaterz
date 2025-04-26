@@ -54,6 +54,10 @@ public partial class GameScene : Node2D
 
       _gameBoardScene = GD.Load<PackedScene>("res://Scenes/GameBoard.tscn");
 
+      // Start game background music.
+      var backgroundMusic = _audioNode.GetNode<AudioStreamPlayer>("Music_BackgroundCG");
+      backgroundMusic?.Play();
+
       //TODO - this is temporary for testing the game board.
       // Create the single player game board.
       CreateGameBoard();
