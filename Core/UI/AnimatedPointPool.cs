@@ -52,9 +52,6 @@ namespace BattleTaterz.Core.UI
       {
          AnimatedPoint animatedPoint = new AnimatedPoint();
          animatedPoint.Name = $"AnimatedPoint{Guid.NewGuid}";
-         AddChild(animatedPoint);
-
-         _pool.Add(animatedPoint);
 
          return animatedPoint;
       }

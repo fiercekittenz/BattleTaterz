@@ -828,7 +828,7 @@ public partial class GameBoard : Node2D
 
             // Put the tile back in the pool for availability.
             DebugLogger.Instance.Log($"\tFlagging tile for recycling after the move ends.", LogLevel.Trace);
-            tile.TileRef.RecyclePostMove = true;
+            tile.TileRef.MarkedForRecycling = true;
             RequestTileAnimate(tile.TileRef, tile.TileRef.Row, tile.TileRef.Column, round, TileAnimationRequest.AnimationType.Recycling);
 
             // Remove the tile from the game board grid.
@@ -941,7 +941,7 @@ public partial class GameBoard : Node2D
       }
       else
       {
-         if (tile.RecyclePostMove)
+         if (tile.MarkedForRecycling)
          {
             tile.Hide();
          }
@@ -1074,8 +1074,7 @@ public partial class GameBoard : Node2D
    private Tile PullTile(int row, int column, int round)
    {
       // Get a tile from the pool and move it into position.
-      Tile tile = _tilePool.Pull();
-      if (tile != null)
+      if (_tilePool.Yoink() is Tile tile)
       {
          DebugLogger.Instance.Log($"{tile.Name} pulled. (old row = {tile.Row}, old column = {tile.Column}, old gem = {(int)tile.CurrentGemType})", LogLevel.Trace);
 
@@ -1090,11 +1089,13 @@ public partial class GameBoard : Node2D
          tile.UpdateCoordinates(row, column);
          tile.SetGemType((Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized));
          RequestTileAnimate(tile, row, column, round, TileAnimationRequest.AnimationType.Static);
+
+         _gameBoard[row, column] = tile;
+
+         return tile;
       }
 
-      _gameBoard[row, column] = tile;
-
-      return tile;
+      return null;
    }
 
    #endregion

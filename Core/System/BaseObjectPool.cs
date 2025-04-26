@@ -1,5 +1,6 @@
 ﻿using BattleTaterz.Core.Enums;
 using BattleTaterz.Core.Gameplay;
+using BattleTaterz.Core.UI;
 using BattleTaterz.Core.Utility;
 using Godot;
 using System;
@@ -49,7 +50,7 @@ namespace BattleTaterz.Core.System
             // Create the initial object pool.
             for (int i = 0; i < PoolSize; ++i)
             {
-               CreatePoolObject();
+               InternalInstantiateObject();
             }
 
             _initialized = true;
@@ -105,7 +106,7 @@ namespace BattleTaterz.Core.System
             if (poolObject == null && DateTime.Now.Subtract(startTime).TotalMilliseconds > MaximumWaitInMs)
             {
                DebugLogger.Instance.Log($"The object pool has exceeded the maximum number of seconds ({MaximumWaitInMs}) allowed. Creating a new object for the pool.", LogLevel.Info);
-               poolObject = CreatePoolObject();
+               poolObject = InternalInstantiateObject();
                break;
             }
          }
@@ -131,6 +132,34 @@ namespace BattleTaterz.Core.System
                currentObject.Recycle();
             }
          }
+      }
+
+      #endregion
+
+      #region Private Methods
+
+      /// <summary>
+      /// Wrapper on object creation to ensure that the pool object is
+      /// always added to the pool and parent node.
+      /// </summary>
+      /// <returns></returns>
+      private PoolObject InternalInstantiateObject()
+      {
+         PoolObject poolObject = CreatePoolObject();
+         if (poolObject != null)
+         {
+            if (poolObject.GetParent() == null)
+            {
+               AddChild(poolObject);
+            }
+
+            if (!_pool.Contains(poolObject))
+            {
+               _pool.Add(poolObject);
+            }
+         }
+
+         return poolObject;
       }
 
       #endregion
