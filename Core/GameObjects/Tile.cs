@@ -1,6 +1,7 @@
 using BattleTaterz.Core;
 using BattleTaterz.Core.Enums;
 using BattleTaterz.Core.Gameplay;
+using BattleTaterz.Core.System;
 using BattleTaterz.Core.UI;
 using BattleTaterz.Core.Utility;
 using Godot;
@@ -13,7 +14,7 @@ using System.Threading.Tasks;
 using static Godot.WebSocketPeer;
 using static Tile;
 
-public partial class Tile : Node2D
+public partial class Tile : PoolObject
 {
    #region Public Properties
 
@@ -56,19 +57,9 @@ public partial class Tile : Node2D
    }
 
    /// <summary>
-   /// Indicates if the tile is available for reuse from the tile pool.
-   /// </summary>
-   public bool IsAvailable { get; private set; } = true;
-
-   /// <summary>
    /// Indicates if the tile is currently animating in a drop or not.
    /// </summary>
    public bool IsAnimating { get; private set; } = false;
-
-   /// <summary>
-   /// Indicates if this tile needs to be recycled post-move or not.
-   /// </summary>
-   public bool RecyclePostMove { get; set; } = false;
 
    /// <summary>
    /// An event that can be listened to for mouse input to the tile.
@@ -103,15 +94,7 @@ public partial class Tile : Node2D
    /// <returns></returns>
    public override string ToString()
    {
-      return $"{Name} (Row = {Row}, Column = {Column}, CurrentGemType = {(int)CurrentGemType}, IsAvailable = {IsAvailable.ToString()}, IsAnimating = {IsAnimating.ToString()}, RecyclePostMove = {RecyclePostMove.ToString()})";
-   }
-
-   /// <summary>
-   /// Called every frame. 'delta' is the elapsed time since the previous frame.
-   /// </summary>
-   /// <param name="delta"></param>
-   public override void _Process(double delta)
-   {
+      return $"{Name} (Row = {Row}, Column = {Column}, CurrentGemType = {(int)CurrentGemType}, IsAvailable = {IsAvailable.ToString()}, IsAnimating = {IsAnimating.ToString()}, RecyclePostMove = {MarkedForRecycling.ToString()})";
    }
 
    /// <summary>
@@ -169,20 +152,9 @@ public partial class Tile : Node2D
    }
 
    /// <summary>
-   /// Mark the tile as unavailable for use.
-   /// </summary>
-   public void MarkUnavailable()
-   {
-      DebugLogger.Instance.Log($"{Name} unavailable.", LogLevel.Trace);
-
-      IsAvailable = false;
-      SetProcess(true);
-   }
-
-   /// <summary>
    /// Clears current gem and coordinate information and sets the tile as available to the tile pool.
    /// </summary>
-   public void Recycle()
+   public override void Recycle()
    {
       DebugLogger.Instance.Log($"{Name} recycling. (row = {Row}, column = {Column}, gemType == {(int)CurrentGemType}", LogLevel.Trace);
 
@@ -192,11 +164,10 @@ public partial class Tile : Node2D
       Column = -1;
       GlobalPosition = new Godot.Vector2(-1 * Globals.TileSize, -1 * Globals.TileSize);
       _gem.SetGemType(Gem.GemType.UNKNOWN);
-      _wasPreparedFromPull = false;
       IsAvailable = true;
       Behavior = BehaviorMode.None;
       ChangeBorder(TileBorder.Default);
-      RecyclePostMove = false;
+      MarkedForRecycling = false;
 
       // Halt processing in the scene graph for this node while it isn't in use.
       SetProcess(false);
@@ -353,12 +324,6 @@ public partial class Tile : Node2D
    private Gem _gem;
 
    private AnimatedSprite2D _border;
-
-   /// <summary>
-   /// Denotes if the tile was prepared from a fresh pull. This means the tile has been
-   /// hidden and moved into position above its column for a drop.
-   /// </summary>
-   private bool _wasPreparedFromPull = false;
 
    #endregion
 }
