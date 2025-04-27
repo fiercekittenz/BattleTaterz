@@ -1,6 +1,7 @@
 using BattleTaterz.Core;
 using BattleTaterz.Core.Enums;
 using BattleTaterz.Core.Gameplay;
+using BattleTaterz.Core.Gameplay.TileBehaviors;
 using BattleTaterz.Core.System;
 using BattleTaterz.Core.UI;
 using BattleTaterz.Core.Utility;
@@ -38,7 +39,7 @@ public partial class Tile : PoolObject
    /// <summary>
    /// Describes the behavior of this tile as it pertains to gameplay.
    /// </summary>
-   public BattleTaterz.Core.Enums.BehaviorMode Behavior { get; set; } = BehaviorMode.None;
+   public TileBehavior Behavior { get; set; }
 
    /// <summary>
    /// Accessor for the current gem type assigned to this tile.
@@ -122,19 +123,13 @@ public partial class Tile : PoolObject
    /// </summary>
    public void ResetBorderToBehaviorDefault()
    {
-      switch (Behavior)
+      if (Behavior != null)
       {
-         case BehaviorMode.None:
-            _border.Frame = (int)TileBorder.Default;
-            break;
-
-         case BehaviorMode.DoublePoints:
-            _border.Frame = (int)TileBorder.DoublePoints;
-            break;
-
-         default:
-            _border.Frame = (int)TileBorder.Default;
-            break;
+         _border.Frame = (int)Behavior.Graphic;
+      }
+      else
+      {
+         _border.Frame = (int)TileBorder.Default;
       }
    }
 
@@ -165,7 +160,7 @@ public partial class Tile : PoolObject
       GlobalPosition = new Godot.Vector2(-1 * Globals.TileSize, -1 * Globals.TileSize);
       _gem.SetGemType(Gem.GemType.UNKNOWN);
       IsAvailable = true;
-      Behavior = BehaviorMode.None;
+      Behavior = null; //TODO - probably should define a default behavior?
       ChangeBorder(TileBorder.Default);
       MarkedForRecycling = false;
 

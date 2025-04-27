@@ -27,7 +27,7 @@ public partial class GameBoard : Node2D
    /// <summary>
    /// The current score.
    /// </summary>
-   public Score Score { get; private set; } = new Score();
+   public Score Score { get; private set; }
 
    /// <summary>
    /// The id of the player that owns this board.
@@ -60,6 +60,9 @@ public partial class GameBoard : Node2D
    public override void _Ready()
    {
       DebugLogger.Instance.Log($"GameBoard [TODO player id] has entered the node tree.", LogLevel.Info);
+
+      // Instantiate the score.
+      Score = new Score(this);
 
       // Cache specific nodes.
       _gameScene = GetParent<GameScene>();

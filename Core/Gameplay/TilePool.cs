@@ -1,4 +1,5 @@
 ﻿using BattleTaterz.Core.Enums;
+using BattleTaterz.Core.Gameplay.TileBehaviors;
 using BattleTaterz.Core.System;
 using BattleTaterz.Core.UI;
 using BattleTaterz.Core.Utility;
@@ -68,14 +69,14 @@ namespace BattleTaterz.Core.Gameplay
       /// <param name="poolObject"></param>
       protected override void ConfigurePulledObject(PoolObject poolObject)
       {
-         var activeSpecials = _pool.Where(o => o is Tile t && !t.IsAvailable && t.Behavior > BehaviorMode.None)?.ToList<PoolObject>();
+         var activeSpecials = _pool.Where(o => o is Tile t && !t.IsAvailable && t.Behavior != null)?.ToList<PoolObject>();
          if (activeSpecials.Count() < MaxSpecials && poolObject is Tile tile)
          {
             //TODO this is a really REALLY simplistic way of determining chance of spawning a double point tile.
             int doublePointsChance = Globals.RNGesus.Next(0, (int)SpecialRate.DoublePoints);
             if (doublePointsChance == 0)
             {
-               tile.Behavior = BehaviorMode.DoublePoints;
+               tile.Behavior = new DoublePointsBehavior();
                tile.ChangeBorder(TileBorder.DoublePoints);
             }
          }

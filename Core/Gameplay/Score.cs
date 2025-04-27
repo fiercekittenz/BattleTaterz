@@ -1,4 +1,5 @@
 ﻿using BattleTaterz.Core.Enums;
+using BattleTaterz.Core.Gameplay.TileBehaviors;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,10 +14,6 @@ namespace BattleTaterz.Core.Gameplay
       // The current score.
       public int Current { get; private set; } = 0;
 
-      //
-      // Consts.
-      //
-
       /// <summary>
       /// The number of points given per tile in a base calculation.
       /// </summary>
@@ -26,6 +23,15 @@ namespace BattleTaterz.Core.Gameplay
       /// The number of bonus points given to tiles beyond the minimum 3 in a match.
       /// </summary>
       public static int BonusPerAdditionalTile = 1;
+
+      /// <summary>
+      /// Constructor
+      /// </summary>
+      /// <param name="parentGameBoard"></param>
+      public Score(GameBoard parentGameBoard)
+      {
+         _parentGameBoard = parentGameBoard;
+      }
 
       /// <summary>
       /// Determines what the score should become based on the provided information.
@@ -42,21 +48,34 @@ namespace BattleTaterz.Core.Gameplay
          // Give bonus points for any tiles matched beyond the minimum 3.
          int bonusPoints = (matchDetails.Tiles.Count - Globals.MinimumMatchCount) * BonusPerAdditionalTile;
 
-         // Points assigned from specials, when applicable.
-         int specialPoints = 0;
-
-         // Handle double point tiles.
-         var doublePointTiles = matchDetails.Tiles.Where(t => t.TileRef.Behavior == BehaviorMode.DoublePoints)?.ToList();
-         if (doublePointTiles.Any())
+         // Handle special tile behavior.
+         int behaviorPoints = 0;
+         foreach (var tile in matchDetails.Tiles)
          {
-            specialPoints += (int)Math.Pow(basePointsGained + bonusPoints, doublePointTiles.Count() * 2);
+            if (tile.TileRef.Behavior != null)
+            {
+               TriggerResult triggerResult = tile.TileRef.Behavior.Trigger(_parentGameBoard, matchDetails, basePointsGained + bonusPoints);
+               behaviorPoints += triggerResult.ScoreChange;
+            }
          }
 
          // Update the current score.
-         Current = Current + basePointsGained + bonusPoints + specialPoints;
+         int subTotal = basePointsGained + bonusPoints + behaviorPoints;
+         Current += basePointsGained + bonusPoints + behaviorPoints;
 
          // As a courtesy, return the updated score for UI changes.
-         return new ScoreUpdateResults(Current, basePointsGained, bonusPoints, specialPoints, ScoreChangeType.Increase);
+         ScoreChangeType scoreDirection = Current > subTotal ? ScoreChangeType.Increase : ScoreChangeType.Decrease;
+         return new ScoreUpdateResults(Current, basePointsGained, bonusPoints, behaviorPoints, scoreDirection);
       }
+
+      /// <summary>
+      /// Default Constructor
+      /// </summary>
+      private Score() { }
+
+      /// <summary>
+      /// Internal reference to the parent game board tracked by this score.
+      /// </summary>
+      private GameBoard _parentGameBoard;
    }
 }
