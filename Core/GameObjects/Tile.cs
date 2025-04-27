@@ -39,7 +39,7 @@ public partial class Tile : PoolObject
    /// <summary>
    /// Describes the behavior of this tile as it pertains to gameplay.
    /// </summary>
-   public TileBehavior Behavior { get; set; }
+   public TileBehavior Behavior { get; set; } = new DefaultBehavior();
 
    /// <summary>
    /// Accessor for the current gem type assigned to this tile.
@@ -123,14 +123,7 @@ public partial class Tile : PoolObject
    /// </summary>
    public void ResetBorderToBehaviorDefault()
    {
-      if (Behavior != null)
-      {
-         _border.Frame = (int)Behavior.Graphic;
-      }
-      else
-      {
-         _border.Frame = (int)TileBorder.Default;
-      }
+      _border.Frame = (int)Behavior.Graphic;
    }
 
    /// <summary>
@@ -160,7 +153,7 @@ public partial class Tile : PoolObject
       GlobalPosition = new Godot.Vector2(-1 * Globals.TileSize, -1 * Globals.TileSize);
       _gem.SetGemType(Gem.GemType.UNKNOWN);
       IsAvailable = true;
-      Behavior = null; //TODO - probably should define a default behavior?
+      Behavior = new DefaultBehavior();
       ChangeBorder(TileBorder.Default);
       MarkedForRecycling = false;
 

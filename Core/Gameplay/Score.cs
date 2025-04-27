@@ -52,11 +52,8 @@ namespace BattleTaterz.Core.Gameplay
          int behaviorPoints = 0;
          foreach (var tile in matchDetails.Tiles)
          {
-            if (tile.TileRef.Behavior != null)
-            {
-               TriggerResult triggerResult = tile.TileRef.Behavior.Trigger(_parentGameBoard, matchDetails, basePointsGained + bonusPoints);
-               behaviorPoints += triggerResult.ScoreChange;
-            }
+            TriggerResult triggerResult = tile.TileRef.Behavior.Trigger(_parentGameBoard, matchDetails, basePointsGained + bonusPoints);
+            behaviorPoints += triggerResult.ScoreChange;
          }
 
          // Update the current score.

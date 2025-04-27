@@ -69,7 +69,7 @@ namespace BattleTaterz.Core.Gameplay
       /// <param name="poolObject"></param>
       protected override void ConfigurePulledObject(PoolObject poolObject)
       {
-         var activeSpecials = _pool.Where(o => o is Tile t && !t.IsAvailable && t.Behavior != null)?.ToList<PoolObject>();
+         var activeSpecials = _pool.Where(o => o is Tile t && !t.IsAvailable && !(t.Behavior is DefaultBehavior))?.ToList<PoolObject>();
          if (activeSpecials.Count() < MaxSpecials && poolObject is Tile tile)
          {
             //TODO this is a really REALLY simplistic way of determining chance of spawning a double point tile.
