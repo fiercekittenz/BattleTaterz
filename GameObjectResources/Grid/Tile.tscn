@@ -20,7 +20,7 @@ z_index = 4
 position = Vector2(0, -4)
 sprite_frames = ExtResource("2_b3yxt")
 animation = &"simple_poof"
-speed_scale = 3.0
+speed_scale = 4.0
 
 [node name="Border" type="AnimatedSprite2D" parent="."]
 visibility_layer = 3
