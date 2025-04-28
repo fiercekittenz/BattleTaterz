@@ -72,12 +72,23 @@ namespace BattleTaterz.Core.Gameplay
          var activeSpecials = _pool.Where(o => o is Tile t && !t.IsAvailable && !(t.Behavior is DefaultBehavior))?.ToList<PoolObject>();
          if (activeSpecials.Count() < MaxSpecials && poolObject is Tile tile)
          {
-            //TODO this is a really REALLY simplistic way of determining chance of spawning a double point tile.
+            //TODO this is a really REALLY simplistic way of determining chance of spawning a special behavior.
+            //     it isn't durable and leads to a lot of dupes. This is temporary code.
+
             int doublePointsChance = Globals.RNGesus.Next(0, (int)SpecialRate.DoublePoints);
             if (doublePointsChance == 0)
             {
                tile.Behavior = new DoublePointsBehavior();
                tile.ChangeBorder(TileBorder.DoublePoints);
+               return;
+            }
+
+            int rowEliminationChance = Globals.RNGesus.Next(0, (int)SpecialRate.MatchDirectionElimination);
+            if (rowEliminationChance == 0)
+            {
+               tile.Behavior = new MatchDirectionEliminationBehavior();
+               tile.ChangeBorder(TileBorder.RowElimination);
+               return;
             }
          }
       }

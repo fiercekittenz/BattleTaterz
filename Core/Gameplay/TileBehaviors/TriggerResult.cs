@@ -16,10 +16,5 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
       /// May be positive or negative.
       /// </summary>
       public int ScoreChange { get; set; } = 0;
-
-      /// <summary>
-      /// Denotes if the behavior triggered successfully or not.
-      /// </summary>
-      public bool IsSuccessful { get; set; } = true;
    }
 }

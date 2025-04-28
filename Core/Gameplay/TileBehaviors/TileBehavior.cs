@@ -17,6 +17,18 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
       /// </summary>
       /// <param name="tileOwner">The game board that holds the tile with this assigned behavior.</param>
       /// <param name="matchDetails">The match that led to the behavior being triggered.</param>
+      /// <returns>TriggerResult object with details on the outcome.</returns>
+      public TriggerResult Trigger(GameBoard tileOwner, MatchDetails matchDetails)
+      {
+         TriggerResult result = InternalTrigger(tileOwner, matchDetails, 0);
+         return result;
+      }
+
+      /// <summary>
+      /// Triggers the behavior.
+      /// </summary>
+      /// <param name="tileOwner">The game board that holds the tile with this assigned behavior.</param>
+      /// <param name="matchDetails">The match that led to the behavior being triggered.</param>
       /// <param name="matchPoints">The match's score before applying special behaviors.</param>
       /// <returns>TriggerResult object with details on the outcome.</returns>
       public TriggerResult Trigger(GameBoard tileOwner, MatchDetails matchDetails, int matchPoints)
@@ -31,6 +43,11 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
       public abstract TileBorder Graphic { get; }
 
       /// <summary>
+      /// At what point during a turn should this behavior be triggered?
+      /// </summary>
+      public abstract BehaviorTriggerStage TriggerStage { get; }
+
+      /// <summary>
       /// Internal method called from the public Trigger() method. Functionality pertaining to
       /// the results of the behavior should be defined in this method.
       /// </summary>
@@ -38,6 +55,6 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
       /// <param name="matchDetails">The match that led to the behavior being triggered.</param>
       /// <param name="matchPoints">The match's score before applying special behaviors.</param>
       /// <returns>TriggerResult object with details on the outcome.</returns>
-      protected abstract TriggerResult InternalTrigger(GameBoard tileOwner, MatchDetails matchDetails, int matchPoints);
+      protected abstract TriggerResult InternalTrigger(GameBoard tileOwner, MatchDetails matchDetails, int matchPoints = 0);
    }
 }

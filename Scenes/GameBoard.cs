@@ -2,6 +2,7 @@ using BattleTaterz.Core;
 using BattleTaterz.Core.Enums;
 using BattleTaterz.Core.GameObjects;
 using BattleTaterz.Core.Gameplay;
+using BattleTaterz.Core.Gameplay.TileBehaviors;
 using BattleTaterz.Core.UI;
 using BattleTaterz.Core.Utility;
 using Godot;
@@ -292,6 +293,35 @@ public partial class GameBoard : Node2D
    }
 
    /// <summary>
+   /// Returns the tile at the specified coordinates.
+   /// </summary>
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   /// <returns></returns>
+   public Tile TileAt(int row, int column)
+   {
+      if (row >= 0 && row < Globals.TileCount && column >= 0 && column < Globals.TileCount)
+      {
+         return _gameBoard[row, column];
+      }
+
+      return null;
+   }
+
+   /// <summary>
+   /// Nulls out the tile at the specified coordinates.
+   /// </summary>
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   public void NullifyTileAt(int row, int column)
+   {
+      if (row >= 0 && row < Globals.TileCount && column >= 0 && column < Globals.TileCount)
+      {
+         _gameBoard[row, column] = null;
+      }
+   }
+
+   /// <summary>
    /// Algorithm for checking the player's game board for matched gems.
    /// </summary>
    /// <param name="round"></param>
@@ -313,7 +343,7 @@ public partial class GameBoard : Node2D
                float slice = horizontalmatches.Count / 2.0f;
                float midPoint = firstTile.GlobalPosition.X + (slice * Globals.TileSize) - (Globals.TileSize / 2.0f);
 
-               matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal, new Godot.Vector2(midPoint, firstTile.GlobalPosition.Y)));
+               matches.Add(new MatchDetails(horizontalmatches, EvaluationDirection.Horizontal, new Godot.Vector2(midPoint, firstTile.GlobalPosition.Y), round));
             }
 
             // Now evaluate vertical-only
@@ -324,7 +354,7 @@ public partial class GameBoard : Node2D
                float slice = horizontalmatches.Count / 2.0f;
                float midPoint = firstTile.GlobalPosition.Y + (slice * Globals.TileSize) - (Globals.TileSize / 2.0f);
 
-               matches.Add(new MatchDetails(verticalmatches, EvaluationDirection.Vertical, new Godot.Vector2(firstTile.GlobalPosition.X, midPoint)));
+               matches.Add(new MatchDetails(verticalmatches, EvaluationDirection.Vertical, new Godot.Vector2(firstTile.GlobalPosition.X, midPoint), round));
             }
          }
       }
@@ -561,6 +591,91 @@ public partial class GameBoard : Node2D
                DebugLogger.Instance.Log($"Done handling all rounds! End Turn.", LogLevel.Trace);
                EndTurn();
             }
+         }
+      }
+   }
+
+   /// <summary>
+   /// Requests the tile to animate and move to the specified row, column.
+   /// </summary>
+   /// <param name="tile"></param>
+   /// <param name="row"></param>
+   /// <param name="column"></param>
+   /// <param name="round"></param>
+   /// <param name="animationType"></param>
+   public void RequestTileAnimate(Tile tile, int row, int column, int round, TileAnimationRequest.AnimationType animationType)
+   {
+      if (State == GameBoardState.ProcessingTurn)
+      {
+         // This is used by multiple animation types, so instantiate it once.
+         TileAnimationRequest baseRequest = new TileAnimationRequest()
+         {
+            Tile = tile,
+            Row = row,
+            Column = column,
+            RoundMoved = round,
+            Type = TileAnimationRequest.AnimationType.Animated
+         };
+
+         switch (animationType)
+         {
+            case TileAnimationRequest.AnimationType.Static:
+               {
+                  // This is a fresh pull. Move the tile into a droppable position first, followed by the move request.
+                  DebugLogger.Instance.Log($"RequestTileAnimate() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Round: {round}, Type: Static", LogLevel.Trace);
+
+                  TileAnimationRequest prepareRequest = new TileAnimationRequest()
+                  {
+                     Tile = tile,
+                     Row = row,
+                     Column = column,
+                     RoundMoved = round,
+                     Type = TileAnimationRequest.AnimationType.Static
+                  };
+
+                  _moveRequests.Add(prepareRequest);
+                  DebugLogger.Instance.Log($"RequestTileAnimate() A adding prepareRequest for {prepareRequest.ToString()}", LogLevel.Info);
+
+                  _moveRequests.Add(baseRequest);
+                  DebugLogger.Instance.Log($"RequestTileAnimate() B adding moveRequest for {baseRequest.ToString()}", LogLevel.Info);
+               }
+               break;
+
+            case TileAnimationRequest.AnimationType.Animated:
+               {
+                  DebugLogger.Instance.Log($"RequestTileAnimate() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Round: {round}, Type: Animated", LogLevel.Trace);
+
+                  _moveRequests.Add(baseRequest);
+
+                  DebugLogger.Instance.Log($"RequestTileAnimate() C adding moveRequest for {baseRequest.ToString()}", LogLevel.Trace);
+               }
+               break;
+
+            case TileAnimationRequest.AnimationType.Recycling:
+               {
+                  // This tile will be recycling after the move ends, so animate it differently from a move.
+                  DebugLogger.Instance.Log($"RequestTileAnimate() {tile.ToString()} recycling.", LogLevel.Trace);
+
+                  tile.MarkedForRecycling = true;
+                  baseRequest.Type = TileAnimationRequest.AnimationType.Recycling;
+                  _moveRequests.Add(baseRequest);
+
+                  DebugLogger.Instance.Log($"RequestTileAnimate() A adding prepareRequest for {baseRequest.ToString()}", LogLevel.Trace);
+               }
+               break;
+         }
+      }
+      else
+      {
+         if (animationType == TileAnimationRequest.AnimationType.Recycling)
+         {
+            tile.MarkedForRecycling = true;
+            tile.Hide();
+         }
+         else
+         {
+            // Just directly move the tile into position. Largely used by the initial generation of the board.
+            tile.MoveTile(this, new TileAnimationRequest() { Tile = tile, Row = row, Column = column, Type = TileAnimationRequest.AnimationType.Static });
          }
       }
    }
@@ -824,19 +939,34 @@ public partial class GameBoard : Node2D
             _uiNode.GetNode<Godot.Label>("Labels/ScoreValueLabel").Text = scoreUpdateResults.UpdatedScore.ToString("N0");
          }
 
-         // Remove the matched tiles from the board.
+         // Remove the matched tiles from the board. Also keep track of which tiles have behaviors that
+         // need to be triggered at this stage.
+         List<Tile> tilesToTrigger = new List<Tile>();
          foreach (var tile in match.Tiles)
          {
             DebugLogger.Instance.Log($"HandleMatches(round {round}) recycling [{tile.Row}, {tile.Column}]({(int)tile.TileRef.CurrentGemType})...", LogLevel.Trace);
 
             // Put the tile back in the pool for availability.
             DebugLogger.Instance.Log($"\tFlagging tile for recycling after the move ends.", LogLevel.Trace);
-            tile.TileRef.MarkedForRecycling = true;
             RequestTileAnimate(tile.TileRef, tile.TileRef.Row, tile.TileRef.Column, round, TileAnimationRequest.AnimationType.Recycling);
 
             // Remove the tile from the game board grid.
             DebugLogger.Instance.Log($"\tSetting [{tile.Row}, {tile.Column}] to null", LogLevel.Trace);
             _gameBoard[tile.Row, tile.Column] = null;
+
+            if (tile.TileRef.Behavior.TriggerStage == BehaviorTriggerStage.CurrentMatchRound)
+            {
+               tilesToTrigger.Add(tile.TileRef);
+            }
+         }
+
+         // Trigger any behaviors found during this round.
+         if (State == GameBoardState.ProcessingTurn && tilesToTrigger.Any())
+         {
+            foreach (var tile in tilesToTrigger)
+            {
+               tile.Behavior.Trigger(this, match);
+            }
          }
       }
 
@@ -871,89 +1001,6 @@ public partial class GameBoard : Node2D
       ++RoundsToProcess;
 
       DebugLogger.Instance.Log($"HandleMatches() level {round} done. Rounds to process = {RoundsToProcess}.", LogLevel.Info);
-   }
-
-   /// <summary>
-   /// Requests the tile to animate and move to the specified row, column.
-   /// </summary>
-   /// <param name="tile"></param>
-   /// <param name="row"></param>
-   /// <param name="column"></param>
-   /// <param name="round"></param>
-   /// <param name="animationType"></param>
-   private void RequestTileAnimate(Tile tile, int row, int column, int round, TileAnimationRequest.AnimationType animationType)
-   {
-      if (State == GameBoardState.ProcessingTurn)
-      {
-         // This is used by multiple animation types, so instantiate it once.
-         TileAnimationRequest baseRequest = new TileAnimationRequest()
-         {
-            Tile = tile,
-            Row = row,
-            Column = column,
-            RoundMoved = round,
-            Type = TileAnimationRequest.AnimationType.Animated
-         };
-
-         switch (animationType)
-         {
-            case TileAnimationRequest.AnimationType.Static:
-               {
-                  // This is a fresh pull. Move the tile into a droppable position first, followed by the move request.
-                  DebugLogger.Instance.Log($"RequestTileAnimate() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Round: {round}, Type: Static", LogLevel.Trace);
-
-                  TileAnimationRequest prepareRequest = new TileAnimationRequest()
-                  {
-                     Tile = tile,
-                     Row = row,
-                     Column = column,
-                     RoundMoved = round,
-                     Type = TileAnimationRequest.AnimationType.Static
-                  };
-
-                  _moveRequests.Add(prepareRequest);
-                  DebugLogger.Instance.Log($"RequestTileAnimate() A adding prepareRequest for {prepareRequest.ToString()}", LogLevel.Info);
-
-                  _moveRequests.Add(baseRequest);
-                  DebugLogger.Instance.Log($"RequestTileAnimate() B adding moveRequest for {baseRequest.ToString()}", LogLevel.Info);
-               }
-               break;
-
-            case TileAnimationRequest.AnimationType.Animated:
-               {
-                  DebugLogger.Instance.Log($"RequestTileAnimate() {tile.Name} move from [{tile.Row}, {tile.Column}] to [{row}, {column}]. Round: {round}, Type: Animated", LogLevel.Trace);
-
-                  _moveRequests.Add(baseRequest);
-
-                  DebugLogger.Instance.Log($"RequestTileAnimate() C adding moveRequest for {baseRequest.ToString()}", LogLevel.Trace);
-               }
-               break;
-
-            case TileAnimationRequest.AnimationType.Recycling:
-               {
-                  // This tile will be recycling after the move ends, so animate it differently from a move.
-                  DebugLogger.Instance.Log($"RequestTileAnimate() {tile.ToString()} recycling.", LogLevel.Trace);
-
-                  baseRequest.Type = TileAnimationRequest.AnimationType.Recycling;
-                  _moveRequests.Add(baseRequest);
-
-                  DebugLogger.Instance.Log($"RequestTileAnimate() A adding prepareRequest for {baseRequest.ToString()}", LogLevel.Trace);
-               }
-               break;
-         }
-      }
-      else
-      {
-         if (tile.MarkedForRecycling)
-         {
-            tile.Hide();
-         }
-         else
-         {
-            // Just directly move the tile into position. Largely used by the initial generation of the board.
-            tile.MoveTile(this, new TileAnimationRequest() { Tile = tile, Row = row, Column = column, Type = TileAnimationRequest.AnimationType.Static });
-         }
-      }
    }
 
    /// <summary>
@@ -1150,7 +1197,10 @@ public partial class GameBoard : Node2D
                         if (DebugLogger.Instance.Enabled)
                         {
                            var coordinates = GetTileCoordinates(_primarySelection);
-                           DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() first selection [{coordinates.Item1}, {coordinates.Item2}]({(int)_primarySelection.CurrentGemType})", LogLevel.Trace);
+                           if (coordinates != null)
+                           {
+                              DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() first selection [{coordinates.Item1}, {coordinates.Item2}]({(int)_primarySelection.CurrentGemType})", LogLevel.Trace);
+                           }
                         }
                      }
                      else if (_secondarySelection == null && tile != _secondarySelection)
@@ -1162,7 +1212,10 @@ public partial class GameBoard : Node2D
                         if (DebugLogger.Instance.Enabled)
                         {
                            var coordinates = GetTileCoordinates(_secondarySelection);
-                           DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() second selection [{coordinates.Item1}, {coordinates.Item2}]({(int)_secondarySelection.CurrentGemType})", LogLevel.Trace);
+                           if (coordinates != null)
+                           {
+                              DebugLogger.Instance.Log($"Gem_OnGemMouseEvent() second selection [{coordinates.Item1}, {coordinates.Item2}]({(int)_secondarySelection.CurrentGemType})", LogLevel.Trace);
+                           }
                         }
                      }
 

@@ -18,11 +18,14 @@ namespace BattleTaterz.Core.Gameplay
 
       public Godot.Vector2 GlobalPositionAverage { get; set; }
 
-      public MatchDetails(List<MatchedTileInfo> tiles, EvaluationDirection direction, Godot.Vector2 globalPositionAverage)
+      public int RoundProcessed { get; set; } = 0;
+
+      public MatchDetails(List<MatchedTileInfo> tiles, EvaluationDirection direction, Godot.Vector2 globalPositionAverage, int roundProcessed)
       {
          Tiles = tiles;
          Direction = direction;
          GlobalPositionAverage = globalPositionAverage;
+         RoundProcessed = roundProcessed;
       }
 
       private MatchDetails() { }

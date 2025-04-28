@@ -14,6 +14,11 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
          get { return TileBorder.Default; }
       }
 
+      public override BehaviorTriggerStage TriggerStage
+      {
+         get { return BehaviorTriggerStage.Scoring; }
+      }
+
       protected override TriggerResult InternalTrigger(GameBoard tileOwner, MatchDetails matchDetails, int matchPoints)
       {
          // Does nothing.

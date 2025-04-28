@@ -11,6 +11,7 @@ namespace BattleTaterz.Core.Enums
       Default,
       Hovered,
       Selected,
-      DoublePoints
+      DoublePoints,
+      RowElimination
    }
 }
