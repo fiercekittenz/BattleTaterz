@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://dwq1urk6jpoqr"]
+[gd_scene load_steps=28 format=3 uid="uid://dwq1urk6jpoqr"]
 
 [ext_resource type="Script" uid="uid://bb68lhat8iyfp" path="res://Scenes/GameScene.cs" id="1_gipt1"]
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
@@ -23,6 +23,7 @@
 [ext_resource type="AudioStream" uid="uid://crjywsuc7w7tw" path="res://Assets/Audio/Background_Main.mp3" id="19_bl770"]
 [ext_resource type="FontFile" uid="uid://c07nhox84jqrv" path="res://Assets/Fonts/Gelato.otf" id="19_v7xhk"]
 [ext_resource type="SpriteFrames" uid="uid://dsvk6eq5isuke" path="res://SpriteResources/logo.tres" id="21_v7xhk"]
+[ext_resource type="SpriteFrames" uid="uid://d3uj6t0xr3etj" path="res://SpriteResources/drop_cloud.tres" id="24_ebcm8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fevyy"]
 bg_color = Color(0.687731, 0.611753, 0.90921, 1)
@@ -206,3 +207,10 @@ script = ExtResource("3_pgw7i")
 [node name="CloudSpawnTimer" type="Timer" parent="CloudManager"]
 wait_time = 2.0
 autostart = true
+
+[node name="TestDropCloud" type="AnimatedSprite2D" parent="."]
+z_index = 4
+position = Vector2(161, 964)
+sprite_frames = ExtResource("24_ebcm8")
+animation = &"simple_poof"
+speed_scale = 3.0

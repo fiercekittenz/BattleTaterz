@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=3 uid="uid://dj5tgpc3itkui"]
+[gd_scene load_steps=7 format=3 uid="uid://dj5tgpc3itkui"]
 
 [ext_resource type="Script" uid="uid://b3fa25iywywsr" path="res://Core/GameObjects/Tile.cs" id="1_7qfsm"]
 [ext_resource type="SpriteFrames" uid="uid://qbq6mnkgmutr" path="res://GameObjectResources/Grid/border_default.tres" id="2_3mxlu"]
+[ext_resource type="SpriteFrames" uid="uid://d3uj6t0xr3etj" path="res://SpriteResources/drop_cloud.tres" id="2_b3yxt"]
 [ext_resource type="Script" uid="uid://dgk47k05kfhpv" path="res://Core/GameObjects/Gem.cs" id="3_6exwp"]
 [ext_resource type="SpriteFrames" uid="uid://dx5x13jsnv3a6" path="res://SpriteResources/gem_sprites.tres" id="4_6exwp"]
 
@@ -12,6 +13,14 @@ size = Vector2(40, 40)
 z_index = 1
 z_as_relative = false
 script = ExtResource("1_7qfsm")
+
+[node name="DropAnimation" type="AnimatedSprite2D" parent="."]
+visible = false
+z_index = 4
+position = Vector2(0, -4)
+sprite_frames = ExtResource("2_b3yxt")
+animation = &"simple_poof"
+speed_scale = 3.0
 
 [node name="Border" type="AnimatedSprite2D" parent="."]
 visibility_layer = 3

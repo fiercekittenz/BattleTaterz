@@ -87,6 +87,9 @@ public partial class Tile : PoolObject
       _border = GetNode<AnimatedSprite2D>("Border");
       _border.SpriteFrames = GD.Load<SpriteFrames>("res://GameObjectResources/Grid/tile_borders.tres");
       ChangeBorder(TileBorder.Default);
+
+      _dropAnimation = GetNode<AnimatedSprite2D>("DropAnimation");
+      ResetDropAnimation();
    }
 
    /// <summary>
@@ -127,6 +130,15 @@ public partial class Tile : PoolObject
    }
 
    /// <summary>
+   /// Resets the drop animation back to frame 0 and hides it for the next time it's needed.
+   /// </summary>
+   public void ResetDropAnimation()
+   {
+      _dropAnimation.Frame = 0;
+      _dropAnimation.Hide();
+   }
+
+   /// <summary>
    /// Sets the row and column coordinates for the tile.
    /// </summary>
    /// <param name="row"></param>
@@ -155,6 +167,7 @@ public partial class Tile : PoolObject
       IsAvailable = true;
       Behavior = new DefaultBehavior();
       ChangeBorder(TileBorder.Default);
+      ResetDropAnimation();
       MarkedForRecycling = false;
 
       // Halt processing in the scene graph for this node while it isn't in use.
@@ -272,6 +285,13 @@ public partial class Tile : PoolObject
 
             DebugLogger.Instance.Log($"\tMoveTile() {Name} finished animating ({Row}, {Column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
 
+            _dropAnimation.Show();
+            _dropAnimation.AnimationFinished += (() =>
+            {
+               ResetDropAnimation();
+            });
+            _dropAnimation.Play();
+
             IsAnimating = false;
             gameBoard.HandleTileMoveAnimationFinished(request);
          });
@@ -312,6 +332,8 @@ public partial class Tile : PoolObject
    private Gem _gem;
 
    private AnimatedSprite2D _border;
+
+   private AnimatedSprite2D _dropAnimation;
 
    #endregion
 }

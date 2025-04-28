@@ -33,6 +33,17 @@ namespace BattleTaterz.Core.Gameplay
 
       #endregion
 
+      #region Public Methods
+
+      /// <summary>
+      /// The pool has entered the scene.
+      /// </summary>
+      public override void _Ready()
+      {
+      }
+
+      #endregion
+
       #region Inherited Methods
 
       /// <summary>
