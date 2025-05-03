@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://dwq1urk6jpoqr"]
+[gd_scene load_steps=27 format=3 uid="uid://dwq1urk6jpoqr"]
 
 [ext_resource type="Script" uid="uid://bb68lhat8iyfp" path="res://Scenes/GameScene.cs" id="1_gipt1"]
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
@@ -14,12 +14,11 @@
 [ext_resource type="AudioStream" uid="uid://dan6nslgd180r" path="res://Assets/Audio/MatchHypeLevel1.ogg" id="12_lko2l"]
 [ext_resource type="AudioStream" uid="uid://cupe3wvamvhsi" path="res://Assets/Audio/MatchHypeLevel5.ogg" id="13_4v654"]
 [ext_resource type="AudioStream" uid="uid://j7v0wy6hu2uf" path="res://Assets/Audio/MatchHypeLevel2.ogg" id="13_em6uu"]
+[ext_resource type="AudioStream" uid="uid://yvyvk4wc5sdg" path="res://Assets/Audio/TileDrop.wav" id="14_ebcm8"]
 [ext_resource type="AudioStream" uid="uid://joxuek3ba8xs" path="res://Assets/Audio/MatchHypeLevel3.ogg" id="14_odb6r"]
 [ext_resource type="AudioStream" uid="uid://c6u33jkgcesxi" path="res://Assets/Audio/SelectSecondaryGem.mp3" id="16_6gwdq"]
 [ext_resource type="AudioStream" uid="uid://mryyvilonf6j" path="res://Assets/Audio/TimerFast.mp3" id="16_gipt1"]
-[ext_resource type="AudioStream" uid="uid://3046vu847x7g" path="res://Assets/Audio/Drop1.mp3" id="17_rsfko"]
 [ext_resource type="AudioStream" uid="uid://c4pg7r4edl6vl" path="res://Assets/Audio/BattleTaterz_CG.mp3" id="17_v7xhk"]
-[ext_resource type="AudioStream" uid="uid://djw1cxgth0vv0" path="res://Assets/Audio/Drop2.mp3" id="18_82uqo"]
 [ext_resource type="AudioStream" uid="uid://crjywsuc7w7tw" path="res://Assets/Audio/Background_Main.mp3" id="19_bl770"]
 [ext_resource type="FontFile" uid="uid://c07nhox84jqrv" path="res://Assets/Fonts/Gelato.otf" id="19_v7xhk"]
 [ext_resource type="SpriteFrames" uid="uid://dsvk6eq5isuke" path="res://SpriteResources/logo.tres" id="21_v7xhk"]
@@ -71,7 +70,9 @@ metadata/_edit_lock_ = true
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Background"]
 z_as_relative = false
 position = Vector2(960, 540)
+scale = Vector2(0.3, 0.3)
 sprite_frames = ExtResource("2_pgw7i")
+frame = 1
 
 [node name="Audio" type="Node2D" parent="."]
 
@@ -129,12 +130,12 @@ volume_db = -30.0
 bus = &"sfx"
 
 [node name="Sound_Drop1" type="AudioStreamPlayer" parent="Audio"]
-stream = ExtResource("17_rsfko")
+stream = ExtResource("14_ebcm8")
 volume_db = -15.0
 bus = &"sfx"
 
 [node name="Sound_Drop2" type="AudioStreamPlayer" parent="Audio"]
-stream = ExtResource("18_82uqo")
+stream = ExtResource("14_ebcm8")
 volume_db = -15.0
 bus = &"sfx"
 

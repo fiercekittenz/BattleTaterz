@@ -1,12 +1,16 @@
-[gd_resource type="SpriteFrames" load_steps=2 format=3 uid="uid://c7wja4ys6g77g"]
+[gd_resource type="SpriteFrames" load_steps=3 format=3 uid="uid://c7wja4ys6g77g"]
 
 [ext_resource type="Texture2D" uid="uid://dblru40h0pyko" path="res://Assets/Backgrounds/MainBackground_Mountains.png" id="1_31l7l"]
+[ext_resource type="Texture2D" uid="uid://cpicyjkef0dtg" path="res://Assets/Backgrounds/Background_MagicalForest.jpeg" id="2_71lot"]
 
 [resource]
 animations = [{
 "frames": [{
 "duration": 1.0,
 "texture": ExtResource("1_31l7l")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_71lot")
 }],
 "loop": true,
 "name": &"default",
