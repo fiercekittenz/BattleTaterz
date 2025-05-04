@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://etnh6a4ogdpr"]
+
+[ext_resource type="SpriteFrames" uid="uid://c67gysr0hux0a" path="res://SpriteResources/chomp_tater.tres" id="1_pe4o8"]
+
+[node name="ChompTater" type="Node2D"]
+
+[node name="Sprite" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.3, 0.3)
+sprite_frames = ExtResource("1_pe4o8")
+frame = 3
+frame_progress = 0.104139
+speed_scale = 2.0
