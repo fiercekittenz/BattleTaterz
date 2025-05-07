@@ -1,12 +1,16 @@
-[gd_scene load_steps=2 format=3 uid="uid://etnh6a4ogdpr"]
+[gd_scene load_steps=3 format=3 uid="uid://etnh6a4ogdpr"]
 
+[ext_resource type="Script" uid="uid://cpb1vp6xq5you" path="res://Core/GameObjects/ChompTater.cs" id="1_8jcyc"]
 [ext_resource type="SpriteFrames" uid="uid://c67gysr0hux0a" path="res://SpriteResources/chomp_tater.tres" id="1_pe4o8"]
 
 [node name="ChompTater" type="Node2D"]
+z_index = 5
+z_as_relative = false
+script = ExtResource("1_8jcyc")
 
 [node name="Sprite" type="AnimatedSprite2D" parent="."]
-scale = Vector2(0.3, 0.3)
+scale = Vector2(0.25, 0.25)
 sprite_frames = ExtResource("1_pe4o8")
-frame = 3
-frame_progress = 0.104139
+frame = 2
+frame_progress = 0.673799
 speed_scale = 2.0

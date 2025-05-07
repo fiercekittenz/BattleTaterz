@@ -11,6 +11,6 @@ namespace BattleTaterz.Core.Enums
    public enum SpecialRate
    {
       DoublePoints               = 50,
-      MatchDirectionElimination  = 1000,           
+      MatchDirectionElimination  = 1,           
    }
 }
