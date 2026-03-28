@@ -27,6 +27,7 @@ namespace BattleTaterz.Core.Gameplay
       public AnimationType Type { get; set; } = TileAnimationRequest.AnimationType.Static;
 
       public float StaggerDelay { get; set; } = 0f;
+
       /// <summary>
       /// Specialized comparison method override.
       /// </summary>

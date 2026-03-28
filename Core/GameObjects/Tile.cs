@@ -248,26 +248,20 @@ public partial class Tile : PoolObject
             Show();
          }
 
+         float distance = Math.Abs(Position.Y - newPosition.Y) / Globals.TileSize;
+         float duration = Math.Clamp(0.15f + (distance * 0.04f), 0.15f, 0.55f);
+
          var tween = GetTree().CreateTween();
          tween.SetProcessMode(Tween.TweenProcessMode.Physics);
+
+         if (request.StaggerDelay > 0f)
+         {
+            tween.TweenInterval(request.StaggerDelay);
+         }
+
          tween.SetParallel(true);
          tween.TweenProperty(this, "modulate:a", 1.0f, 0.1f).SetEase(Tween.EaseType.In);
-         tween.TweenProperty(this, "position", newPosition, 0.4f).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Spring).From(Position);
-
-         // Play an escalating sound chime.
-         string hypeSoundName = "Sound_MatchHypeLevel";
-         if (request.RoundMoved >= Globals.MaxHypeLevel)
-         {
-            hypeSoundName = $"{hypeSoundName}{Globals.MaxHypeLevel}";
-         }
-         else
-         {
-            hypeSoundName = $"{hypeSoundName}{request.RoundMoved + 1}";
-         }
-
-         DebugLogger.Instance.Log($"\tMoveTile() {Name} playing {hypeSoundName}", LogLevel.Trace);
-         var soundToPlay = gameBoard.GetParent<GameScene>().AudioNode.GetNode<AudioStreamPlayer>(hypeSoundName);
-         soundToPlay?.Play();
+         tween.TweenProperty(this, "position", newPosition, duration).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Spring).From(Position);
 
          // Sound is now triggered once per round in GameBoard._Process() to avoid
          // per-tile AudioStreamPlayer spam that causes overlap and exhaustion.
@@ -280,10 +274,11 @@ public partial class Tile : PoolObject
             DebugLogger.Instance.Log($"\tMoveTile() {Name} finished animating ({Row}, {Column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
 
             _dropAnimation.Show();
-            _dropAnimation.AnimationFinished += (() =>
+            if (!_dropAnimationHandlerConnected)
             {
-               ResetDropAnimation();
-            });
+               _dropAnimation.AnimationFinished += OnDropAnimationFinished;
+               _dropAnimationHandlerConnected = true;
+            }
             _dropAnimation.Play();
 
             IsAnimating = false;
@@ -304,6 +299,11 @@ public partial class Tile : PoolObject
    #endregion
 
    #region Private Methods
+
+   private void OnDropAnimationFinished()
+   {
+      ResetDropAnimation();
+   }
 
    /// <summary>
    /// Handles mouse events for the attached gem node.
@@ -328,6 +328,8 @@ public partial class Tile : PoolObject
    private AnimatedSprite2D _border;
 
    private AnimatedSprite2D _dropAnimation;
+
+   private bool _dropAnimationHandlerConnected = false;
 
    #endregion
 }

@@ -111,65 +111,114 @@ public partial class GameBoard : Node2D
       // Take care of animating tiles on frame ticks.
       if (State == GameBoardState.AnimatingMoveResults)
       {
-         TileAnimationRequest request = null;
-
          DebugLogger.Instance.Log($"\tProcess() {_moveRequests.Count} total remaining move requests yet to be processed.", LogLevel.Trace);
 
-         var roundRequests = _moveRequests.Where(r => r.RoundMoved == ProcessingRound);
-         if (roundRequests != null && roundRequests.Any())
+         // Batch dequeue: drain current round requests, process all that are ready.
+         var currentRoundRequests = new List<TileAnimationRequest>();
+         var otherRoundRequests = new List<TileAnimationRequest>();
+         while (_moveRequests.TryTake(out var req))
          {
-            if (_previouslyProcessedRequest != null)
+            if (req.RoundMoved == ProcessingRound)
+               currentRoundRequests.Add(req);
+            else
+               otherRoundRequests.Add(req);
+         }
+
+         if (currentRoundRequests.Count > 0)
+         {
+            // Classify requests: ready to process or deferred (tile still animating).
+            var ready = new List<TileAnimationRequest>();
+            var deferred = new List<TileAnimationRequest>();
+            var animatedThisFrame = new HashSet<Tile>();
+
+            foreach (var candidate in currentRoundRequests)
             {
-               var peek = roundRequests.First();
-               if (_previouslyProcessedRequest.Tile == peek.Tile &&
-                   _previouslyProcessedRequest.Type == TileAnimationRequest.AnimationType.Static &&
-                   peek.Type == TileAnimationRequest.AnimationType.Animated &&
-                   peek.Tile.IsAnimating)
+               if (candidate.Type == TileAnimationRequest.AnimationType.Animated)
                {
-                  // This move request is for a tile that is still busy animating from a static move out of the tile pool.
-                  // It's still busy positioning itself for this animation, which will be the visible drop.
-                  // Early return and come back to it.
-                  DebugLogger.Instance.Log($"\t\tProcess() {peek.ToString()} is waiting on {_previouslyProcessedRequest.ToString()} to finish animating.", LogLevel.Info);
-                  return;
+                  // Defer if the tile is still animating or already given an Animated this frame.
+                  if (candidate.Tile.IsAnimating || animatedThisFrame.Contains(candidate.Tile))
+                  {
+                     deferred.Add(candidate);
+                     continue;
+                  }
+                  animatedThisFrame.Add(candidate.Tile);
+               }
+               ready.Add(candidate);
+            }
+
+            // Re-add deferred and other-round requests to the queue.
+            foreach (var req in deferred)
+               _moveRequests.Add(req);
+            foreach (var req in otherRoundRequests)
+               _moveRequests.Add(req);
+
+            // Add all ready requests to _movingTiles before processing
+            // so HandleTileMoveAnimationFinished sees correct counts.
+            foreach (var request in ready)
+               _movingTiles.Add(request);
+
+            DebugLogger.Instance.Log($"\t\t_Process() {ready.Count} ready, {deferred.Count} deferred for round {ProcessingRound}.", LogLevel.Trace);
+
+            // Play sounds once per round (not per tile) to avoid AudioStreamPlayer spam.
+            double nowMs = Time.GetTicksMsec();
+            bool roundCooldownOk = ProcessingRound != _lastSoundRound;
+            bool timeCooldownOk = (nowMs - _lastSoundTimeMs) >= 2000;
+            if (roundCooldownOk && timeCooldownOk && ready.Any(r => r.Type == TileAnimationRequest.AnimationType.Animated))
+            {
+               _lastSoundRound = ProcessingRound;
+               _lastSoundTimeMs = nowMs;
+
+               // Play an escalating hype chime. Nodes are Sound_MatchHypeLevel0–4;
+               // round 0 starts at level 1, capped at the highest available node.
+               int hypeLevel = Math.Min(ProcessingRound + 1, Globals.MaxHypeLevel - 1);
+               string hypeSoundName = $"Sound_MatchHypeLevel{hypeLevel}";
+               DebugLogger.Instance.Log($"\t\t_Process() playing {hypeSoundName} for round {ProcessingRound}", LogLevel.Trace);
+               var hypeSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>(hypeSoundName);
+               hypeSound?.Play();
+
+               // One drop sound per round with ~1/3 probability.
+               if (Globals.RNGesus.Next(0, 3) == 0)
+               {
+                  int dropSoundId = Globals.RNGesus.Next(1, 3);
+                  var dropSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
+                  dropSound?.Play();
                }
             }
 
-            _moveRequests.TryTake(out request);
-            _previouslyProcessedRequest = request;
-            DebugLogger.Instance.Log($"\t\t_Process() {roundRequests.Count()} remain for round {ProcessingRound}.", LogLevel.Trace);
+            // Process all ready requests this frame.
+            foreach (var request in ready)
+            {
+               DebugLogger.Instance.Log($"\t\t_Process() {request.Tile.Name} moving from [{request.Tile.Row}, {request.Tile.Column}] to [{request.Row}, {request.Column}]. Round = {request.RoundMoved}", LogLevel.Trace);
+
+               switch (request.Type)
+               {
+                  case TileAnimationRequest.AnimationType.Static:
+                     {
+                        request.Tile.PrepareForDrop(this, request);
+                     }
+                     break;
+
+                  case TileAnimationRequest.AnimationType.Animated:
+                     {
+                        request.Tile.MoveTile(this, request);
+                     }
+                     break;
+
+                  case TileAnimationRequest.AnimationType.Recycling:
+                     {
+                        request.Tile.AnimateRecycle(this, request);
+                     }
+                     break;
+               }
+            }
          }
          else
          {
+            // Re-add other-round requests to the queue.
+            foreach (var req in otherRoundRequests)
+               _moveRequests.Add(req);
+
             DebugLogger.Instance.Log($"\t\t_Process() no requests pending for {ProcessingRound}. Waiting on round to be advanced.", LogLevel.Trace);
-         }
-
-         if (request != null)
-         {
-            _movingTiles.Add(request);
-
-            DebugLogger.Instance.Log($"\t\t_Process() {request.Tile.Name} moving from [{request.Tile.Row}, {request.Tile.Column}] to [{request.Row}, {request.Column}]. Round = {request.RoundMoved}", LogLevel.Trace);
-
-            switch (request.Type)
-            {
-               case TileAnimationRequest.AnimationType.Static:
-                  {
-                     // If this is a static move, it's meant to prepare the tile for dropping.
-                     request.Tile.PrepareForDrop(this, request);
-                  }
-                  break;
-
-               case TileAnimationRequest.AnimationType.Animated:
-                  {
-                     request.Tile.MoveTile(this, request);
-                  }
-                  break;
-
-               case TileAnimationRequest.AnimationType.Recycling:
-                  {
-                     request.Tile.AnimateRecycle(this, request);
-                  }
-                  break;
-            }
          }
       }
    }
@@ -257,6 +306,8 @@ public partial class GameBoard : Node2D
       // Reset the state.
       ProcessingRound = 0;
       RoundsToProcess = 0;
+      _lastSoundRound = -1;
+      _lastSoundTimeMs = 0;
       State = GameBoardState.Initializing;
 
       // Recycle all tiles.
@@ -400,12 +451,22 @@ public partial class GameBoard : Node2D
    /// <param name="secondary"></param>
    public void SwapSelectedTiles(Tile primary, Tile secondary)
    {
+      // Guard: if either tile is no longer on the board, abort the swap.
+      if (primary.Row < 0 || primary.Column < 0 || primary.Row >= Globals.TileCount || primary.Column >= Globals.TileCount
+         || secondary.Row < 0 || secondary.Column < 0 || secondary.Row >= Globals.TileCount || secondary.Column >= Globals.TileCount
+         || _gameBoard[primary.Row, primary.Column] != primary
+         || _gameBoard[secondary.Row, secondary.Column] != secondary)
+      {
+         DebugLogger.Instance.Log("SwapSelectedTiles aborted: one or both tiles are no longer on the board.", LogLevel.Info);
+         SetProcessInput(true);
+         State = GameBoardState.Playable;
+         ClearSelection();
+         return;
+      }
+
       if (DebugLogger.Instance.Enabled && DebugLogger.Instance.LoggingLevel == LogLevel.Info)
       {
-         // Only check this information if we want to log debug info to avoid the additional cycles.
-         var primaryCoordinates = GetTileCoordinates(primary);
-         var secondaryCoordinates = GetTileCoordinates(secondary);
-         DebugLogger.Instance.Log($"Attempting to swap [{primaryCoordinates.Item1}, {primaryCoordinates.Item2}]({(int)primary.CurrentGemType}) with [{secondaryCoordinates.Item1}, {secondaryCoordinates.Item2}]({(int)secondary.CurrentGemType})", LogLevel.Info);
+         DebugLogger.Instance.Log($"Attempting to swap [{primary.Row}, {primary.Column}]({(int)primary.CurrentGemType}) with [{secondary.Row}, {secondary.Column}]({(int)secondary.CurrentGemType})", LogLevel.Info);
       }
 
       // Cache the game board coordinates and positions of each before swapping.
@@ -436,6 +497,8 @@ public partial class GameBoard : Node2D
          // Reset the processing round back to one and handle the results of the matches.
          ProcessingRound = 0;
          RoundsToProcess = 0;
+         _lastSoundRound = -1;
+         _lastSoundTimeMs = 0;
          HandleMatches(matches, ProcessingRound);
 
          // Reset the move timer.
@@ -478,7 +541,9 @@ public partial class GameBoard : Node2D
          }
 
          ProcessingRound = 0;
-         DebugLogger.Instance.Log($"************************************************** ROUND {ProcessingRound} \"**************************************************", LogLevel.Trace);
+         _lastSoundRound = -1;
+         _lastSoundTimeMs = 0;
+         DebugLogger.Instance.Log($"************************************************** ROUND {ProcessingRound}\"**************************************************", LogLevel.Trace);
          State = GameBoardState.AnimatingMoveResults;
       }
    }
@@ -603,7 +668,7 @@ public partial class GameBoard : Node2D
    /// <param name="column"></param>
    /// <param name="round"></param>
    /// <param name="animationType"></param>
-   public void RequestTileAnimate(Tile tile, int row, int column, int round, TileAnimationRequest.AnimationType animationType)
+   public void RequestTileAnimate(Tile tile, int row, int column, int round, TileAnimationRequest.AnimationType animationType, float staggerDelay = 0f)
    {
       if (State == GameBoardState.ProcessingTurn)
       {
@@ -614,7 +679,8 @@ public partial class GameBoard : Node2D
             Row = row,
             Column = column,
             RoundMoved = round,
-            Type = TileAnimationRequest.AnimationType.Animated
+            Type = TileAnimationRequest.AnimationType.Animated,
+            StaggerDelay = staggerDelay
          };
 
          switch (animationType)
@@ -697,6 +763,11 @@ public partial class GameBoard : Node2D
 
       ProcessingRound = 0;
       RoundsToProcess = 0;
+
+      // Drain any residual animation requests so stale items from this turn
+      // cannot bleed into the next turn's round-processing.
+      while (_moveRequests.TryTake(out _)) { }
+      while (_movingTiles.TryTake(out _)) { }
 
       _tilePool.DoRecycle();
 
@@ -948,7 +1019,7 @@ public partial class GameBoard : Node2D
 
             // Put the tile back in the pool for availability.
             DebugLogger.Instance.Log($"\tFlagging tile for recycling after the move ends.", LogLevel.Trace);
-            RequestTileAnimate(tile.TileRef, tile.TileRef.Row, tile.TileRef.Column, round, TileAnimationRequest.AnimationType.Recycling);
+            RequestTileAnimate(tile.TileRef, tile.Row, tile.Column, round, TileAnimationRequest.AnimationType.Recycling);
 
             // Remove the tile from the game board grid.
             DebugLogger.Instance.Log($"\tSetting [{tile.Row}, {tile.Column}] to null", LogLevel.Trace);
@@ -1029,12 +1100,19 @@ public partial class GameBoard : Node2D
             // Visually slide this tile down.
             DebugLogger.Instance.Log($"\t\tMove [{aboveRow}, {column}]({(int)higherTile.CurrentGemType}) down", LogLevel.Trace);
 
-            RequestTileAnimate(higherTile, row, column, round, TileAnimationRequest.AnimationType.Animated);
+            float staggerDelay = (column * 0.02f) + ((startingRow - aboveRow) * 0.04f);
+            RequestTileAnimate(higherTile, row, column, round, TileAnimationRequest.AnimationType.Animated, staggerDelay);
             compressed = true;
 
             // Swap the data between grid slots to shift the non-null slot into the null.
             _gameBoard[row, column] = _gameBoard[aboveRow, column];
             _gameBoard[aboveRow, column] = null;
+
+            // Keep the tile's own coordinates in sync with its new board position.
+            // Without this, cascade-round behaviors that read tile.Row/tile.Column
+            // (e.g. MatchDirectionEliminationBehavior → NullifyTileAt) would target
+            // the stale pre-compression position, nullifying the wrong cell.
+            higherTile.UpdateCoordinates(row, column);
 
             int belowRow = row + 1;
             if (belowRow < Globals.TileCount && _gameBoard[belowRow, column] == null)
@@ -1138,7 +1216,8 @@ public partial class GameBoard : Node2D
          int randomized = Random.Shared.Next(0, Convert.ToInt32(Gem.GemType.GemType_Count));
          tile.UpdateCoordinates(row, column);
          tile.SetGemType((Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized));
-         RequestTileAnimate(tile, row, column, round, TileAnimationRequest.AnimationType.Static);
+         float staggerDelay = (column * 0.02f) + ((Globals.TileCount - row) * 0.04f);
+         RequestTileAnimate(tile, row, column, round, TileAnimationRequest.AnimationType.Static, staggerDelay);
 
          _gameBoard[row, column] = tile;
 
@@ -1318,6 +1397,14 @@ public partial class GameBoard : Node2D
 
    // Reference to the object that handles the move timer.
    private MoveTimerLabel _moveTimerLabel;
+
+   // Tracks the last round for which we played the hype chime,
+   // so sounds fire once per round instead of once per tile.
+   private int _lastSoundRound = -1;
+
+   // Monotonic timestamp (ms) of the last hype chime, used to enforce
+   // ~2s spacing when cascading rounds process in rapid succession.
+   private double _lastSoundTimeMs = 0;
 
    #endregion
 }
