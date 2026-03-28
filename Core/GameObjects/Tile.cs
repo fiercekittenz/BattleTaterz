@@ -185,15 +185,16 @@ public partial class Tile : PoolObject
 
       var tween = GetTree().CreateTween();
       tween.SetProcessMode(Tween.TweenProcessMode.Physics);
-      tween.SetParallel(true);
+
+      if (request.StaggerDelay > 0f)
+      {
+         tween.TweenInterval(request.StaggerDelay);
+      }
+
       tween.TweenProperty(this, "modulate:a", 0.0f, 0.1f).SetEase(Tween.EaseType.In);
       tween.Finished += (() =>
       {
-         // Clean up and let the GameBoard know that this tile is done animating.
          tween.Kill();
-
-         DebugLogger.Instance.Log($"\tAnimateRecycle() {Name} finished animating ({Row}, {Column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
-
          IsAnimating = false;
          gameBoard.HandleTileMoveAnimationFinished(request);
       });
