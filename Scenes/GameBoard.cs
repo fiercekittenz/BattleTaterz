@@ -1131,7 +1131,7 @@ public partial class GameBoard : Node2D
       int compressionRound = round;
       if (cascadeDelay > 0f)
       {
-         var chompResult = allTriggerResults.FirstOrDefault(r => r.ChompTaterNode != null);
+         var chompResult = allTriggerResults.OfType<ChompTaterTriggerResult>().FirstOrDefault();
          if (chompResult != null)
          {
             var chompRequest = new TileAnimationRequest()

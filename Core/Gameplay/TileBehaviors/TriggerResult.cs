@@ -28,16 +28,5 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
       /// before starting, so the behavior's visual can finish first.
       /// </summary>
       public float CascadeDelaySeconds { get; set; } = 0f;
-
-      /// <summary>
-      /// Pre-configured ChompTater node ready for animation.
-      /// When set, GameBoard._Process() creates the tween when the round starts.
-      /// </summary>
-      public Godot.Node2D ChompTaterNode { get; set; }
-      public Godot.Vector2 ChompStartPosition { get; set; }
-      public Godot.Vector2 ChompEndPosition { get; set; }
-      public float ChompFadeInDuration { get; set; }
-      public float ChompTraversalDuration { get; set; }
-      public float ChompFadeOutDuration { get; set; }
    }
 }

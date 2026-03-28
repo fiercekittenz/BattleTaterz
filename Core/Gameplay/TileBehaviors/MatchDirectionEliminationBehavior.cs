@@ -25,8 +25,7 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
 
       protected override TriggerResult InternalTrigger(GameBoard tileOwner, MatchDetails matchDetails, int matchPoints)
       {
-         // Track the grid positions that were eliminated by this behavior so cascading drops that land here won't play DropAnimation.
-         TriggerResult result = new TriggerResult();
+         ChompTaterTriggerResult result = new ChompTaterTriggerResult();
          result.EliminatedPositions = new HashSet<(int, int)>();
          // fadeIn + traversal + fadeOut + postEatingPause
          result.CascadeDelaySeconds = 0.3f + 2.0f + 0.3f + 1.0f;
