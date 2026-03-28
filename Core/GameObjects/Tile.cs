@@ -269,14 +269,8 @@ public partial class Tile : PoolObject
          var soundToPlay = gameBoard.GetParent<GameScene>().AudioNode.GetNode<AudioStreamPlayer>(hypeSoundName);
          soundToPlay?.Play();
 
-         // Play a drop sound.
-         //TODO: find some drop sounds that aren't as clunky/chopping wood sounding.
-         if (Globals.RNGesus.Next(0, 10) % 3 == 0)
-         {
-            int dropSoundId = Globals.RNGesus.Next(1, 3);
-            var dropSound = gameBoard.GetParent<GameScene>().AudioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
-            dropSound?.Play();
-         }
+         // Sound is now triggered once per round in GameBoard._Process() to avoid
+         // per-tile AudioStreamPlayer spam that causes overlap and exhaustion.
 
          tween.Finished += (() =>
          {
