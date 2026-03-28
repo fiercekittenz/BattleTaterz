@@ -33,7 +33,6 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
             int targetRow = referenceTile.Row;
             int targetColumn = referenceTile.Column;
 
-            //TODO Test code for the chomptater animation
             ChompTater chompTater = GD.Load<PackedScene>("res://Scenes/ChompTater.tscn").Instantiate<ChompTater>();
             chompTater.Hide();
             tileOwner.AddChild(chompTater);
@@ -44,34 +43,41 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
 
             if (matchDetails.Direction == EvaluationDirection.Horizontal)
             {
-               // Spawn ChompTater in column 0, row [referenceTile's row]
-               chompStartPosition = new Godot.Vector2(Globals.TileGridOffset, (targetRow * Globals.TileSize) + Globals.TileGridOffset);
+               // Start one tile left of column 0 for "enters from offscreen" effect
+               chompStartPosition = new Godot.Vector2(Globals.TileGridOffset - Globals.TileSize, (targetRow * Globals.TileSize) + Globals.TileGridOffset);
                chompEndPosition = new Vector2((Globals.TileCount * Globals.TileSize) + Globals.TileGridOffset, chompStartPosition.Y);
             }
             else
             {
-               // Spawn ChompTater in row 0, column [referenceTile's column]
+               // Start one tile above row 0 for "enters from offscreen" effect
                chompTater.Rotate((float)Math.PI/2);
-               chompStartPosition = new Godot.Vector2((targetColumn * Globals.TileSize) + Globals.TileGridOffset, Globals.TileGridOffset);
+               chompStartPosition = new Godot.Vector2((targetColumn * Globals.TileSize) + Globals.TileGridOffset, Globals.TileGridOffset - Globals.TileSize);
                chompEndPosition = new Vector2(chompStartPosition.X, (Globals.TileCount * Globals.TileSize) + Globals.TileGridOffset);
             }
 
             chompTater.Position = chompStartPosition;
+            chompTater.Modulate = new Color(1, 1, 1, 0);
             chompAnimation?.Play();
             chompTater.Show();
 
-            var tween = tileOwner.GetTree().CreateTween();
+            // Fade in → move across → then chain a separate tween for fade out.
+            // Two TweenProperty calls for the same property on one Tween causes the
+            // second to silently override the first, so the fade-out lives on its own Tween.
+            var tween = chompTater.CreateTween();
             tween.SetProcessMode(Tween.TweenProcessMode.Physics);
-            tween.SetParallel(false);
+            tween.TweenProperty(chompTater, "modulate:a", 1.0f, 0.3f).SetEase(Tween.EaseType.In);
             tween.TweenProperty(chompTater, "position", chompEndPosition, 2.0f).SetEase(Tween.EaseType.Out).From(chompStartPosition);
-            tween.TweenProperty(chompTater, "modulate:a", 1.0f, 0.1f).SetEase(Tween.EaseType.In);
-            tween.Finished += (() =>
+            tween.TweenCallback(Callable.From(() =>
             {
-               tween.Kill();
-               tileOwner.RemoveChild(chompTater);
-               chompTater.QueueFree();
-            });
-            //TODO end test code
+               var fadeOut = chompTater.CreateTween();
+               fadeOut.SetProcessMode(Tween.TweenProcessMode.Physics);
+               fadeOut.TweenProperty(chompTater, "modulate:a", 0.0f, 0.3f).SetEase(Tween.EaseType.Out);
+               fadeOut.Finished += () =>
+               {
+                  tileOwner.RemoveChild(chompTater);
+                  chompTater.QueueFree();
+               };
+            }));
 
             // Build a list of the tiles in this row and remove them. Make sure the list excludes any tiles in the match
             // as those have already been handled at this point.
