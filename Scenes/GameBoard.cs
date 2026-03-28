@@ -160,17 +160,13 @@ public partial class GameBoard : Node2D
             DebugLogger.Instance.Log($"\t\t_Process() {ready.Count} ready, {deferred.Count} deferred for round {ProcessingRound}.", LogLevel.Trace);
 
             // Play sounds once per round (not per tile) to avoid AudioStreamPlayer spam.
-            double nowMs = Time.GetTicksMsec();
-            bool roundCooldownOk = ProcessingRound != _lastSoundRound;
-            bool timeCooldownOk = (nowMs - _lastSoundTimeMs) >= 2000;
-            if (roundCooldownOk && timeCooldownOk && ready.Any(r => r.Type == TileAnimationRequest.AnimationType.Animated))
+            if (ProcessingRound != _lastSoundRound && ready.Any(r => r.Type == TileAnimationRequest.AnimationType.Animated))
             {
                _lastSoundRound = ProcessingRound;
-               _lastSoundTimeMs = nowMs;
 
                // Play an escalating hype chime. Nodes are Sound_MatchHypeLevel0–4;
-               // round 0 starts at level 1, capped at the highest available node.
-               int hypeLevel = Math.Min(ProcessingRound + 1, Globals.MaxHypeLevel - 1);
+               // wraps back to level 0 when exceeding available nodes.
+               int hypeLevel = ProcessingRound % Globals.MaxHypeLevel;
                string hypeSoundName = $"Sound_MatchHypeLevel{hypeLevel}";
                DebugLogger.Instance.Log($"\t\t_Process() playing {hypeSoundName} for round {ProcessingRound}", LogLevel.Trace);
                var hypeSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>(hypeSoundName);
@@ -307,7 +303,6 @@ public partial class GameBoard : Node2D
       ProcessingRound = 0;
       RoundsToProcess = 0;
       _lastSoundRound = -1;
-      _lastSoundTimeMs = 0;
       State = GameBoardState.Initializing;
 
       // Recycle all tiles.
@@ -498,7 +493,6 @@ public partial class GameBoard : Node2D
          ProcessingRound = 0;
          RoundsToProcess = 0;
          _lastSoundRound = -1;
-         _lastSoundTimeMs = 0;
          HandleMatches(matches, ProcessingRound);
 
          // Reset the move timer.
@@ -542,7 +536,6 @@ public partial class GameBoard : Node2D
 
          ProcessingRound = 0;
          _lastSoundRound = -1;
-         _lastSoundTimeMs = 0;
          DebugLogger.Instance.Log($"************************************************** ROUND {ProcessingRound}\"**************************************************", LogLevel.Trace);
          State = GameBoardState.AnimatingMoveResults;
       }
@@ -668,7 +661,7 @@ public partial class GameBoard : Node2D
    /// <param name="column"></param>
    /// <param name="round"></param>
    /// <param name="animationType"></param>
-   public void RequestTileAnimate(Tile tile, int row, int column, int round, TileAnimationRequest.AnimationType animationType, float staggerDelay = 0f)
+   public void RequestTileAnimate(Tile tile, int row, int column, int round, TileAnimationRequest.AnimationType animationType, float staggerDelay = 0f, bool shouldPlayDropAnimation = false)
    {
       if (State == GameBoardState.ProcessingTurn)
       {
@@ -680,7 +673,8 @@ public partial class GameBoard : Node2D
             Column = column,
             RoundMoved = round,
             Type = TileAnimationRequest.AnimationType.Animated,
-            StaggerDelay = staggerDelay
+            StaggerDelay = staggerDelay,
+            ShouldPlayDropAnimation = shouldPlayDropAnimation
          };
 
          switch (animationType)
@@ -997,6 +991,17 @@ public partial class GameBoard : Node2D
    /// </summary>
    private void HandleMatches(List<MatchDetails> matches, int round = 0)
    {
+      // Collect all positions vacated by matched tiles so the DropAnimation
+      // only plays on tiles that land in those specific slots.
+      var matchedPositions = new HashSet<(int, int)>();
+      foreach (var match in matches)
+      {
+         foreach (var tile in match.Tiles)
+         {
+            matchedPositions.Add((tile.Row, tile.Column));
+         }
+      }
+
       foreach (var match in matches)
       {
          // Update the score and display points gained animation.
@@ -1052,14 +1057,14 @@ public partial class GameBoard : Node2D
          {
             if (_gameBoard[row, column] == null)
             {
-               CompressColumn(ref matches, row, column, row, round /* cache in the recursive method the actual starting point */);
+               CompressColumn(ref matches, row, column, row, round, matchedPositions /* cache in the recursive method the actual starting point */);
                break;
             }
          }
       }
 
       // After all holes are plugged with new tiles, evaluate the board for any bonus matches made through the drop.
-      ReplaceRemovedTiles(round);
+      ReplaceRemovedTiles(round, matchedPositions);
 
       // Need to keep checking for matches after the collapse until no more matches are found.
       var newMatches = CheckForMatches(round);
@@ -1081,7 +1086,7 @@ public partial class GameBoard : Node2D
    /// <param name="row"></param>
    /// <param name="column"></param>
    /// <param name="round"></param>
-   private void CompressColumn(ref List<MatchDetails> matches, int row, int column, int startingRow, int round)
+   private void CompressColumn(ref List<MatchDetails> matches, int row, int column, int startingRow, int round, HashSet<(int, int)> matchedPositions)
    {
       bool compressed = false;
       DebugLogger.Instance.Log($"CompressColumn(round {round}) [{row}, {column}] starting from row {startingRow}", LogLevel.Info);
@@ -1101,7 +1106,7 @@ public partial class GameBoard : Node2D
             DebugLogger.Instance.Log($"\t\tMove [{aboveRow}, {column}]({(int)higherTile.CurrentGemType}) down", LogLevel.Trace);
 
             float staggerDelay = (column * 0.02f) + ((startingRow - aboveRow) * 0.04f);
-            RequestTileAnimate(higherTile, row, column, round, TileAnimationRequest.AnimationType.Animated, staggerDelay);
+            RequestTileAnimate(higherTile, row, column, round, TileAnimationRequest.AnimationType.Animated, staggerDelay, matchedPositions.Contains((row, column)));
             compressed = true;
 
             // Swap the data between grid slots to shift the non-null slot into the null.
@@ -1118,19 +1123,19 @@ public partial class GameBoard : Node2D
             if (belowRow < Globals.TileCount && _gameBoard[belowRow, column] == null)
             {
                DebugLogger.Instance.Log($"\t\tContinue compression from below (= [{belowRow}, {column}]) starting row {startingRow}", LogLevel.Trace);
-               CompressColumn(ref matches, belowRow, column, startingRow, round);
+               CompressColumn(ref matches, belowRow, column, startingRow, round, matchedPositions);
             }
             else
             {
                DebugLogger.Instance.Log($"\t\tContinue compression from [{row}, {column}] starting row {startingRow}", LogLevel.Trace);
-               CompressColumn(ref matches, row, column, startingRow, round);
+               CompressColumn(ref matches, row, column, startingRow, round, matchedPositions);
             }
          }
          // Else, we need to continue to move up until we have a valid higher tile and a potential null.
          else
          {
             DebugLogger.Instance.Log($"\t\tContinue compression from above (= [{aboveRow}, {column}]) starting row {startingRow}", LogLevel.Trace);
-            CompressColumn(ref matches, aboveRow, column, startingRow, round);
+            CompressColumn(ref matches, aboveRow, column, startingRow, round, matchedPositions);
          }
       }
       else if (_gameBoard[startingRow, column] == null)
@@ -1152,7 +1157,7 @@ public partial class GameBoard : Node2D
          if (!compressionComplete)
          {
             DebugLogger.Instance.Log($"\tCompression not complete. CompressColumn() again with [{startingRow}, {column}] starting row {startingRow}", LogLevel.Trace);
-            CompressColumn(ref matches, startingRow, column, startingRow, round);
+            CompressColumn(ref matches, startingRow, column, startingRow, round, matchedPositions);
          }
       }
 
@@ -1168,7 +1173,7 @@ public partial class GameBoard : Node2D
    /// Goes through the board and replaces any instances of a null entry with a new tile and random gem.
    /// </summary>
    /// <param name="round"></param>
-   private void ReplaceRemovedTiles(int round)
+   private void ReplaceRemovedTiles(int round, HashSet<(int, int)> matchedPositions)
    {
       DebugLogger.Instance.Log($"ReplaceRemovedTiles(round {round}) begin...", LogLevel.Info);
 
@@ -1179,7 +1184,7 @@ public partial class GameBoard : Node2D
             if (_gameBoard[row, column] == null)
             {
                DebugLogger.Instance.Log($"\tReplacing [{row}, {column}]", LogLevel.Trace);
-               var result = PullTile(row, column, round);
+               var result = PullTile(row, column, round, matchedPositions);
                if (result != null)
                {
                   //result.Show();
@@ -1199,7 +1204,7 @@ public partial class GameBoard : Node2D
    /// <param name="column"></param>
    /// <param name="round"></param>
    /// <exception cref="Exception"></exception>
-   private Tile PullTile(int row, int column, int round)
+   private Tile PullTile(int row, int column, int round, HashSet<(int, int)> matchedPositions = null)
    {
       // Get a tile from the pool and move it into position.
       if (_tilePool.Yoink() is Tile tile)
@@ -1217,7 +1222,8 @@ public partial class GameBoard : Node2D
          tile.UpdateCoordinates(row, column);
          tile.SetGemType((Gem.GemType)Enum.ToObject(typeof(Gem.GemType), randomized));
          float staggerDelay = (column * 0.02f) + ((Globals.TileCount - row) * 0.04f);
-         RequestTileAnimate(tile, row, column, round, TileAnimationRequest.AnimationType.Static, staggerDelay);
+         bool shouldPlayDrop = matchedPositions != null && matchedPositions.Contains((row, column));
+         RequestTileAnimate(tile, row, column, round, TileAnimationRequest.AnimationType.Static, staggerDelay, shouldPlayDrop);
 
          _gameBoard[row, column] = tile;
 
@@ -1401,10 +1407,6 @@ public partial class GameBoard : Node2D
    // Tracks the last round for which we played the hype chime,
    // so sounds fire once per round instead of once per tile.
    private int _lastSoundRound = -1;
-
-   // Monotonic timestamp (ms) of the last hype chime, used to enforce
-   // ~2s spacing when cascading rounds process in rapid succession.
-   private double _lastSoundTimeMs = 0;
 
    #endregion
 }

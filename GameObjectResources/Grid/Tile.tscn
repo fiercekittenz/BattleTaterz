@@ -19,7 +19,7 @@ visible = false
 z_index = 4
 position = Vector2(0, -4)
 sprite_frames = ExtResource("2_b3yxt")
-speed_scale = 2.0
+speed_scale = 2.5
 
 [node name="Border" type="AnimatedSprite2D" parent="."]
 visibility_layer = 3

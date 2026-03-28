@@ -273,13 +273,16 @@ public partial class Tile : PoolObject
 
             DebugLogger.Instance.Log($"\tMoveTile() {Name} finished animating ({Row}, {Column}) New position = ({Position.X}, {Position.Y})", LogLevel.Trace);
 
-            _dropAnimation.Show();
-            if (!_dropAnimationHandlerConnected)
+            if (request.ShouldPlayDropAnimation)
             {
-               _dropAnimation.AnimationFinished += OnDropAnimationFinished;
-               _dropAnimationHandlerConnected = true;
+               _dropAnimation.Show();
+               if (!_dropAnimationHandlerConnected)
+               {
+                  _dropAnimation.AnimationFinished += OnDropAnimationFinished;
+                  _dropAnimationHandlerConnected = true;
+               }
+               _dropAnimation.Play();
             }
-            _dropAnimation.Play();
 
             IsAnimating = false;
             gameBoard.HandleTileMoveAnimationFinished(request);

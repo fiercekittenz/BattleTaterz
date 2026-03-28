@@ -28,6 +28,8 @@ namespace BattleTaterz.Core.Gameplay
 
       public float StaggerDelay { get; set; } = 0f;
 
+      public bool ShouldPlayDropAnimation { get; set; } = false;
+
       /// <summary>
       /// Specialized comparison method override.
       /// </summary>
