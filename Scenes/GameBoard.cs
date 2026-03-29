@@ -172,10 +172,12 @@ public partial class GameBoard : Node2D
                var hypeSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>(hypeSoundName);
                hypeSound?.Play();
 
-               // One drop sound per round with ~1/3 probability.
-               if (Globals.RNGesus.Next(0, 3) == 0)
+               // Drop sound: once per player turn, alternating Drop1/Drop2.
+               if (!_turnDropSoundPlayed)
                {
-                  int dropSoundId = Globals.RNGesus.Next(1, 3);
+                  _turnDropSoundPlayed = true;
+                  int dropSoundId = _nextDropIsOne ? 1 : 2;
+                  _nextDropIsOne = !_nextDropIsOne;
                   var dropSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>($"Sound_Drop{dropSoundId}");
                   dropSound?.Play();
                }
@@ -347,6 +349,7 @@ public partial class GameBoard : Node2D
       ProcessingRound = 0;
       RoundsToProcess = 0;
       _lastSoundRound = -1;
+      _turnDropSoundPlayed = false;
       State = GameBoardState.Initializing;
 
       // Recycle all tiles.
@@ -537,6 +540,7 @@ public partial class GameBoard : Node2D
          ProcessingRound = 0;
          RoundsToProcess = 0;
          _lastSoundRound = -1;
+         _turnDropSoundPlayed = false;
          HandleMatches(matches, ProcessingRound);
 
          // Reset the move timer.
@@ -580,6 +584,7 @@ public partial class GameBoard : Node2D
 
          ProcessingRound = 0;
          _lastSoundRound = -1;
+         _turnDropSoundPlayed = false;
          DebugLogger.Instance.Log($"************************************************** ROUND {ProcessingRound}\"**************************************************", LogLevel.Trace);
          State = GameBoardState.AnimatingMoveResults;
       }
@@ -1534,6 +1539,10 @@ public partial class GameBoard : Node2D
    // Tracks the last round for which we played the hype chime,
    // so sounds fire once per round instead of once per tile.
    private int _lastSoundRound = -1;
+
+   // Drop sounds play once per player turn, alternating Drop1/Drop2.
+   private bool _nextDropIsOne = true;
+   private bool _turnDropSoundPlayed = false;
 
    #endregion
 }
