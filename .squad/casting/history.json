@@ -1,0 +1,22 @@
+{
+  "universe_usage_history": [
+    {
+      "universe": "Futurama",
+      "assignment_id": "battletaterz-init-2026-03-27",
+      "used_at": "2026-03-27T20:35:45Z"
+    }
+  ],
+  "assignment_cast_snapshots": {
+    "battletaterz-init-2026-03-27": {
+      "universe": "Futurama",
+      "agents": {
+        "art-director": "Leela",
+        "project-manager": "Hermes",
+        "technical-director": "Farnsworth",
+        "senior-engineer-1": "Fry",
+        "senior-engineer-2": "Amy"
+      },
+      "created_at": "2026-03-27T20:35:45Z"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "agents": {
+    "art-director": {
+      "persistent_name": "Leela",
+      "universe": "Futurama",
+      "created_at": "2026-03-27T20:35:45Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "project-manager": {
+      "persistent_name": "Hermes",
+      "universe": "Futurama",
+      "created_at": "2026-03-27T20:35:45Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "technical-director": {
+      "persistent_name": "Farnsworth",
+      "universe": "Futurama",
+      "created_at": "2026-03-27T20:35:45Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "senior-engineer-1": {
+      "persistent_name": "Fry",
+      "universe": "Futurama",
+      "created_at": "2026-03-27T20:35:45Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "senior-engineer-2": {
+      "persistent_name": "Amy",
+      "universe": "Futurama",
+      "created_at": "2026-03-27T20:35:45Z",
+      "legacy_named": false,
+      "status": "active"
+    }
+  }
+}
