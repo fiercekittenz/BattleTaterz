@@ -1,4 +1,4 @@
-[gd_resource type="VisualShader" load_steps=7 format=3 uid="uid://cw6w4d6yvlf0y"]
+[gd_resource type="VisualShader" format=3 uid="uid://cw6w4d6yvlf0y"]
 
 [sub_resource type="VisualShaderNodeTexture2DParameter" id="VisualShaderNodeTexture2DParameter_scbo4"]
 parameter_name = "basic_texture"
@@ -24,44 +24,6 @@ op_type = 2
 operator = 2
 
 [resource]
-code = "shader_type canvas_item;
-render_mode blend_add, unshaded;
-
-uniform float GlowValue : hint_range(0.0, 0.5);
-uniform sampler2D basic_texture : source_color;
-
-
-
-void fragment() {
-// Input:7
-	vec4 n_out7p0 = COLOR;
-
-
-// FloatParameter:6
-	float n_out6p0 = GlowValue;
-
-
-	vec4 n_out3p0;
-// Texture2D:3
-	n_out3p0 = texture(basic_texture, UV);
-	float n_out3p1 = n_out3p0.r;
-
-
-// SmoothStep:5
-	float n_in5p1 = 1.00000;
-	float n_out5p0 = smoothstep(n_out6p0, n_in5p1, n_out3p1);
-
-
-// VectorOp:8
-	vec4 n_out8p0 = n_out7p0 * vec4(n_out5p0);
-
-
-// Output:0
-	COLOR.rgb = vec3(n_out8p0.xyz);
-
-
-}
-"
 mode = 1
 modes/blend = 1
 flags/unshaded = true
