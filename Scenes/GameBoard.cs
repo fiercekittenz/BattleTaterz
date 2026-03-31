@@ -238,7 +238,10 @@ public partial class GameBoard : Node2D
                         chompTween.TweenProperty(chompNode, "modulate:a", 1.0f, data.FadeInDuration)
                            .SetEase(Tween.EaseType.In);
 
-                        // Play moving sound when traversal begins
+                        // Brief pause so the player can see the chomp tater before it starts eating
+                        chompTween.TweenInterval(0.5f);
+
+                        // Play moving sound when traversal begins (after pause)
                         chompTween.TweenCallback(Callable.From(() =>
                         {
                            var movingSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Sound_ChompMoving");
@@ -1101,9 +1104,10 @@ public partial class GameBoard : Node2D
                // Calculate when the chomp reaches this tile's position
                int index = match.Direction == EvaluationDirection.Horizontal ? tile.Column : tile.Row;
                float fadeInDuration = 0.3f;
+               float pauseDuration = 0.5f;
                float traversalDuration = 2.0f;
                float totalSpan = (float)(Globals.TileCount + 1);
-               recycleDelay = fadeInDuration + ((index + 1) * (traversalDuration / totalSpan));
+               recycleDelay = fadeInDuration + pauseDuration + ((index + 1) * (traversalDuration / totalSpan));
             }
 
             DebugLogger.Instance.Log($"\tFlagging tile for recycling after the move ends.", LogLevel.Trace);

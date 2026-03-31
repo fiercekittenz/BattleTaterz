@@ -27,8 +27,8 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
       {
          ChompTaterTriggerResult result = new ChompTaterTriggerResult();
          result.EliminatedPositions = new HashSet<(int, int)>();
-         // fadeIn + traversal + fadeOut + postEatingPause
-         result.CascadeDelaySeconds = 0.3f + 2.0f + 0.3f + 1.0f;
+         // fadeIn + pause + traversal + fadeOut + postEatingPause
+         result.CascadeDelaySeconds = 0.3f + 0.5f + 2.0f + 0.3f + 1.0f;
 
          MatchedTileInfo referenceTile = matchDetails.Tiles.First();
          if (referenceTile != null)
@@ -84,6 +84,7 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
 
             // Remove non-matched tiles in the row/column with stagger-timed recycling
             float fadeInDuration = 0.3f;
+            float pauseDuration = 0.5f;
             float traversalDuration = 2.0f;
             float totalSpan = (float)(Globals.TileCount + 1);
             float timePerTileWidth = traversalDuration / totalSpan;
@@ -109,7 +110,7 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
                   if (existing != null && !existing.Any())
                   {
                      // Calculate stagger delay: when chomp reaches this tile
-                     float recycleDelay = fadeInDuration + ((targetDir + 1) * timePerTileWidth);
+                     float recycleDelay = fadeInDuration + pauseDuration + ((targetDir + 1) * timePerTileWidth);
 
                      tileOwner.RequestTileAnimate(tileInRow, row, col,
                         matchDetails.RoundProcessed, TileAnimationRequest.AnimationType.Recycling, recycleDelay);
