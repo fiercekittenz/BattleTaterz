@@ -228,13 +228,32 @@ public partial class GameBoard : Node2D
                         // Create on GameBoard so tween survives chompNode cleanup
                         var chompTween = CreateTween();
                         chompTween.SetProcessMode(Tween.TweenProcessMode.Physics);
+
+                        // Play intro sound when fade-in begins
+                        chompTween.TweenCallback(Callable.From(() =>
+                        {
+                           var introSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Sound_ChompIntro");
+                           introSound?.Play();
+                        }));
                         chompTween.TweenProperty(chompNode, "modulate:a", 1.0f, data.FadeInDuration)
                            .SetEase(Tween.EaseType.In);
+
+                        // Play moving sound when traversal begins
+                        chompTween.TweenCallback(Callable.From(() =>
+                        {
+                           var movingSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Sound_ChompMoving");
+                           movingSound?.Play();
+                        }));
                         chompTween.TweenProperty(chompNode, "position", data.EndPosition, data.TraversalDuration)
                            .SetEase(Tween.EaseType.Out)
                            .From(data.StartPosition);
+
+                        // Play out sound when fade-out begins
                         chompTween.TweenCallback(Callable.From(() =>
                         {
+                           var outSound = _gameScene.AudioNode.GetNode<AudioStreamPlayer>("Sound_ChompOut");
+                           outSound?.Play();
+
                            // Fade out on a separate tween (can't reuse modulate:a on same tween)
                            var fadeOut = chompNode.CreateTween();
                            fadeOut.SetProcessMode(Tween.TweenProcessMode.Physics);

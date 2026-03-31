@@ -20,6 +20,9 @@
 [ext_resource type="AudioStream" uid="uid://mryyvilonf6j" path="res://Assets/Audio/TimerFast.mp3" id="16_gipt1"]
 [ext_resource type="AudioStream" uid="uid://c4pg7r4edl6vl" path="res://Assets/Audio/BattleTaterz_CG.mp3" id="17_v7xhk"]
 [ext_resource type="AudioStream" uid="uid://crjywsuc7w7tw" path="res://Assets/Audio/Background_Main.mp3" id="19_bl770"]
+[ext_resource type="AudioStream" uid="uid://2hn1i2jj6cl2" path="res://Assets/Audio/chomptater-intro.mp3" id="20_chomp_intro"]
+[ext_resource type="AudioStream" uid="uid://q8melnlrnf5p" path="res://Assets/Audio/chomptater-moving.mp3" id="21_chomp_moving"]
+[ext_resource type="AudioStream" uid="uid://dhs6td0avjrrb" path="res://Assets/Audio/chomptater-out.mp3" id="22_chomp_out"]
 [ext_resource type="FontFile" uid="uid://c07nhox84jqrv" path="res://Assets/Fonts/Gelato.otf" id="19_v7xhk"]
 [ext_resource type="SpriteFrames" uid="uid://dsvk6eq5isuke" path="res://SpriteResources/logo.tres" id="21_v7xhk"]
 
@@ -152,6 +155,21 @@ volume_db = -15.0
 stream = ExtResource("17_v7xhk")
 volume_db = -15.0
 parameters/looping = true
+
+[node name="Sound_ChompIntro" type="AudioStreamPlayer" parent="Audio"]
+stream = ExtResource("20_chomp_intro")
+volume_db = -15.0
+bus = &"sfx"
+
+[node name="Sound_ChompMoving" type="AudioStreamPlayer" parent="Audio"]
+stream = ExtResource("21_chomp_moving")
+volume_db = -15.0
+bus = &"sfx"
+
+[node name="Sound_ChompOut" type="AudioStreamPlayer" parent="Audio"]
+stream = ExtResource("22_chomp_out")
+volume_db = -15.0
+bus = &"sfx"
 
 [node name="UI" type="Control" parent="." unique_id=310505489]
 top_level = true
