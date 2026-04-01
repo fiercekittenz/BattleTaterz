@@ -10,7 +10,7 @@ namespace BattleTaterz.Core.Enums
    // they'll be moved to the gameboard object when that happens.
    public enum SpecialRate
    {
-      DoublePoints               = 50,
-      MatchDirectionElimination  = 1000,           
+      DoublePoints               = 75,
+      MatchDirectionElimination  = 200,           
    }
 }

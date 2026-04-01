@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://dwq1urk6jpoqr"]
+[gd_scene format=3 uid="uid://dwq1urk6jpoqr"]
 
 [ext_resource type="Script" uid="uid://bb68lhat8iyfp" path="res://Scenes/GameScene.cs" id="1_gipt1"]
 [ext_resource type="SpriteFrames" uid="uid://c7wja4ys6g77g" path="res://SpriteResources/background.tres" id="2_pgw7i"]
@@ -20,10 +20,11 @@
 [ext_resource type="AudioStream" uid="uid://mryyvilonf6j" path="res://Assets/Audio/TimerFast.mp3" id="16_gipt1"]
 [ext_resource type="AudioStream" uid="uid://c4pg7r4edl6vl" path="res://Assets/Audio/BattleTaterz_CG.mp3" id="17_v7xhk"]
 [ext_resource type="AudioStream" uid="uid://crjywsuc7w7tw" path="res://Assets/Audio/Background_Main.mp3" id="19_bl770"]
+[ext_resource type="AudioStream" uid="uid://2hn1i2jj6cl2" path="res://Assets/Audio/chomptater-intro.mp3" id="20_chomp_intro"]
+[ext_resource type="AudioStream" uid="uid://q8melnlrnf5p" path="res://Assets/Audio/chomptater-moving.mp3" id="21_chomp_moving"]
+[ext_resource type="AudioStream" uid="uid://dhs6td0avjrrb" path="res://Assets/Audio/chomptater-out.mp3" id="22_chomp_out"]
 [ext_resource type="FontFile" uid="uid://c07nhox84jqrv" path="res://Assets/Fonts/Gelato.otf" id="19_v7xhk"]
 [ext_resource type="SpriteFrames" uid="uid://dsvk6eq5isuke" path="res://SpriteResources/logo.tres" id="21_v7xhk"]
-[ext_resource type="PackedScene" uid="uid://etnh6a4ogdpr" path="res://Scenes/ChompTater.tscn" id="24_4v654"]
-[ext_resource type="SpriteFrames" uid="uid://d3uj6t0xr3etj" path="res://SpriteResources/drop_cloud.tres" id="24_ebcm8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fevyy"]
 bg_color = Color(0.687731, 0.611753, 0.90921, 1)
@@ -62,112 +63,126 @@ border_color = Color(0.498039, 0.27451, 0.717647, 1)
 expand_margin_top = 20.0
 expand_margin_bottom = 20.0
 
-[node name="GameScene" type="Node2D"]
+[node name="GameScene" type="Node2D" unique_id=1548038920]
 script = ExtResource("1_gipt1")
 
-[node name="Background" type="Node2D" parent="."]
+[node name="Background" type="Node2D" parent="." unique_id=1954889467]
 metadata/_edit_lock_ = true
 
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Background"]
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Background" unique_id=760717436]
 z_as_relative = false
 position = Vector2(960, 540)
 scale = Vector2(0.3, 0.3)
 sprite_frames = ExtResource("2_pgw7i")
 frame = 1
 
-[node name="Audio" type="Node2D" parent="."]
+[node name="Audio" type="Node2D" parent="." unique_id=303248079]
 
-[node name="Sound_Compress" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_Compress" type="AudioStreamPlayer" parent="Audio" unique_id=1277262864]
 stream = ExtResource("7_4v654")
 volume_db = -30.0
 bus = &"sfx"
 
-[node name="Sound_SelectPrimary" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_SelectPrimary" type="AudioStreamPlayer" parent="Audio" unique_id=1344823493]
 stream = ExtResource("8_leul7")
 volume_db = -30.0
 bus = &"sfx"
 
-[node name="Sound_BadMove" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_BadMove" type="AudioStreamPlayer" parent="Audio" unique_id=2044945845]
 stream = ExtResource("9_wp4mh")
 volume_db = -30.0
 bus = &"sfx"
 
-[node name="MainAudio_NoMoreMoves" type="AudioStreamPlayer" parent="Audio"]
+[node name="MainAudio_NoMoreMoves" type="AudioStreamPlayer" parent="Audio" unique_id=905647942]
 stream = ExtResource("10_y0yaw")
 volume_db = -30.0
 
-[node name="MainAudio_GameBoardReady" type="AudioStreamPlayer" parent="Audio"]
+[node name="MainAudio_GameBoardReady" type="AudioStreamPlayer" parent="Audio" unique_id=943637253]
 stream = ExtResource("11_yl3ua")
 volume_db = -30.0
 
-[node name="Sound_MatchHypeLevel0" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_MatchHypeLevel0" type="AudioStreamPlayer" parent="Audio" unique_id=742092280]
 stream = ExtResource("12_lko2l")
 volume_db = -15.0
 bus = &"sfx"
 
-[node name="Sound_MatchHypeLevel1" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_MatchHypeLevel1" type="AudioStreamPlayer" parent="Audio" unique_id=2140417462]
 stream = ExtResource("13_em6uu")
 volume_db = -15.0
 bus = &"sfx"
 
-[node name="Sound_MatchHypeLevel2" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_MatchHypeLevel2" type="AudioStreamPlayer" parent="Audio" unique_id=1023676788]
 stream = ExtResource("14_odb6r")
 volume_db = -15.0
 bus = &"sfx"
 
-[node name="Sound_MatchHypeLevel3" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_MatchHypeLevel3" type="AudioStreamPlayer" parent="Audio" unique_id=473666543]
 stream = ExtResource("12_ebcm8")
 volume_db = -15.0
 bus = &"sfx"
 
-[node name="Sound_MatchHypeLevel4" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_MatchHypeLevel4" type="AudioStreamPlayer" parent="Audio" unique_id=1677109639]
 stream = ExtResource("13_4v654")
 volume_db = -15.0
 bus = &"sfx"
 
-[node name="Sound_SelectSecondary" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_SelectSecondary" type="AudioStreamPlayer" parent="Audio" unique_id=592607940]
 stream = ExtResource("16_6gwdq")
 volume_db = -30.0
 bus = &"sfx"
 
-[node name="Sound_Drop1" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_Drop1" type="AudioStreamPlayer" parent="Audio" unique_id=1902282644]
 stream = ExtResource("14_ebcm8")
 volume_db = -15.0
 bus = &"sfx"
 
-[node name="Sound_Drop2" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_Drop2" type="AudioStreamPlayer" parent="Audio" unique_id=287314303]
 stream = ExtResource("14_ebcm8")
 volume_db = -15.0
 bus = &"sfx"
 
-[node name="Music_BackgroundMain" type="AudioStreamPlayer" parent="Audio"]
+[node name="Music_BackgroundMain" type="AudioStreamPlayer" parent="Audio" unique_id=1594649798]
 stream = ExtResource("19_bl770")
 volume_db = -30.0
 bus = &"music"
 parameters/looping = true
 
-[node name="Sound_TimerFast" type="AudioStreamPlayer" parent="Audio"]
+[node name="Sound_TimerFast" type="AudioStreamPlayer" parent="Audio" unique_id=1627707098]
 stream = ExtResource("16_gipt1")
 volume_db = -15.0
 
-[node name="Music_BackgroundCG" type="AudioStreamPlayer" parent="Audio"]
+[node name="Music_BackgroundCG" type="AudioStreamPlayer" parent="Audio" unique_id=7198147]
 stream = ExtResource("17_v7xhk")
 volume_db = -15.0
 parameters/looping = true
 
-[node name="UI" type="Control" parent="."]
+[node name="Sound_ChompIntro" type="AudioStreamPlayer" parent="Audio"]
+stream = ExtResource("20_chomp_intro")
+volume_db = -15.0
+bus = &"sfx"
+
+[node name="Sound_ChompMoving" type="AudioStreamPlayer" parent="Audio"]
+stream = ExtResource("21_chomp_moving")
+volume_db = -15.0
+bus = &"sfx"
+
+[node name="Sound_ChompOut" type="AudioStreamPlayer" parent="Audio"]
+stream = ExtResource("22_chomp_out")
+volume_db = -15.0
+bus = &"sfx"
+
+[node name="UI" type="Control" parent="." unique_id=310505489]
 top_level = true
 z_index = 5
 layout_mode = 3
 anchors_preset = 0
 
-[node name="Control" type="Control" parent="UI"]
-layout_mode = 3
+[node name="Control" type="Control" parent="UI" unique_id=586087842]
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="MasterSliderLabel" type="Label" parent="UI/Control"]
+[node name="MasterSliderLabel" type="Label" parent="UI/Control" unique_id=1804127844]
 top_level = true
 layout_mode = 0
 offset_left = 1589.0
@@ -181,7 +196,7 @@ theme_override_fonts/font = ExtResource("19_v7xhk")
 theme_override_font_sizes/font_size = 48
 text = "Volume"
 
-[node name="MasterVolumeSlider" type="HSlider" parent="UI/Control"]
+[node name="MasterVolumeSlider" type="HSlider" parent="UI/Control" unique_id=1118758808]
 top_level = true
 layout_mode = 0
 offset_left = 1593.0
@@ -198,24 +213,14 @@ value = 0.5
 script = ExtResource("6_ebcm8")
 AudioBusName = "Master"
 
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="UI"]
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="UI" unique_id=1678780382]
 position = Vector2(203, 107)
 sprite_frames = ExtResource("21_v7xhk")
 
-[node name="CloudManager" type="Node2D" parent="."]
+[node name="CloudManager" type="Node2D" parent="." unique_id=2117093736]
 z_index = 1
 script = ExtResource("3_pgw7i")
 
-[node name="CloudSpawnTimer" type="Timer" parent="CloudManager"]
+[node name="CloudSpawnTimer" type="Timer" parent="CloudManager" unique_id=483886810]
 wait_time = 2.0
 autostart = true
-
-[node name="TestDropCloud" type="AnimatedSprite2D" parent="."]
-z_index = 4
-position = Vector2(161, 964)
-sprite_frames = ExtResource("24_ebcm8")
-animation = &"simple_poof"
-speed_scale = 3.0
-
-[node name="ChompTater" parent="." instance=ExtResource("24_4v654")]
-position = Vector2(156, 702)

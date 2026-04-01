@@ -13,7 +13,7 @@ script = ExtResource("1_7oe7p")
 [node name="AnimatedPointPool" type="Node2D" parent="."]
 top_level = true
 visibility_layer = 1048575
-z_index = 10
+z_index = 99
 z_as_relative = false
 script = ExtResource("2_7bmm7")
 

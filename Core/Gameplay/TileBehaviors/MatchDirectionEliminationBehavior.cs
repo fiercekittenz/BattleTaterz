@@ -1,4 +1,5 @@
 ﻿using BattleTaterz.Core.Enums;
+using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +25,10 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
 
       protected override TriggerResult InternalTrigger(GameBoard tileOwner, MatchDetails matchDetails, int matchPoints)
       {
-         TriggerResult result = new TriggerResult();
+         ChompTaterTriggerResult result = new ChompTaterTriggerResult();
+         result.EliminatedPositions = new HashSet<(int, int)>();
+         // fadeIn + pause + traversal + fadeOut + postEatingPause
+         result.CascadeDelaySeconds = 0.3f + 0.5f + 2.0f + 0.3f + 1.0f;
 
          MatchedTileInfo referenceTile = matchDetails.Tiles.First();
          if (referenceTile != null)
@@ -32,17 +36,71 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
             int targetRow = referenceTile.Row;
             int targetColumn = referenceTile.Column;
 
-            // Build a list of the tiles in this row and remove them. Make sure the list excludes any tiles in the match
-            // as those have already been handled at this point.
+            ChompTater chompTater = GD.Load<PackedScene>("res://Scenes/ChompTater.tscn").Instantiate<ChompTater>();
+            chompTater.Hide();
+            tileOwner.AddChild(chompTater);
+
+            AnimatedSprite2D chompAnimation = chompTater.GetNode<AnimatedSprite2D>("Sprite");
+            Godot.Vector2 chompStartPosition;
+            Godot.Vector2 chompEndPosition;
+
+            if (matchDetails.Direction == EvaluationDirection.Horizontal)
+            {
+               // Start one tile left of column 0 for "enters from offscreen" effect
+               chompStartPosition = new Godot.Vector2(Globals.TileGridOffset - Globals.TileSize, (targetRow * Globals.TileSize) + Globals.TileGridOffset);
+               chompEndPosition = new Vector2((Globals.TileCount * Globals.TileSize) + Globals.TileGridOffset, chompStartPosition.Y);
+            }
+            else
+            {
+               // Start one tile above row 0 for "enters from offscreen" effect
+               chompTater.Rotate((float)Math.PI/2);
+               chompStartPosition = new Godot.Vector2((targetColumn * Globals.TileSize) + Globals.TileGridOffset, Globals.TileGridOffset - Globals.TileSize);
+               chompEndPosition = new Vector2(chompStartPosition.X, (Globals.TileCount * Globals.TileSize) + Globals.TileGridOffset);
+            }
+
+            chompTater.Position = chompStartPosition;
+            chompTater.Modulate = new Color(1, 1, 1, 0);
+            chompAnimation?.Play();
+            chompTater.Show();
+
+            // Populate TriggerResult so GameBoard._Process() creates the tween
+            // when this round starts, keeping cascade chomps in sync.
+            result.ChompTaterNode = chompTater;
+            result.ChompStartPosition = chompStartPosition;
+            result.ChompEndPosition = chompEndPosition;
+            result.ChompFadeInDuration = 0.3f;
+            result.ChompTraversalDuration = 2.0f;
+            result.ChompFadeOutDuration = 0.3f;
+
+            // Record every position in the target row/column so cascade drops
+            // landing here won't play DropAnimation.
+            for (int i = 0; i < Globals.TileCount; ++i)
+            {
+               if (matchDetails.Direction == EvaluationDirection.Horizontal)
+                  result.EliminatedPositions.Add((targetRow, i));
+               else
+                  result.EliminatedPositions.Add((i, targetColumn));
+            }
+
+            // Remove non-matched tiles in the row/column with stagger-timed recycling
+            float fadeInDuration = 0.3f;
+            float pauseDuration = 0.5f;
+            float traversalDuration = 2.0f;
+            float totalSpan = (float)(Globals.TileCount + 1);
+            float timePerTileWidth = traversalDuration / totalSpan;
+
             for (int targetDir = 0; targetDir < Globals.TileCount; ++targetDir)
             {
                Tile tileInRow = null;
+               int row, col;
                if (matchDetails.Direction == EvaluationDirection.Horizontal)
                {
+                  row = targetRow; col = targetDir;
                   tileInRow = tileOwner.TileAt(targetRow, targetDir);
                }
                else
                {
+                  row = targetDir; col = targetColumn;
                   tileInRow = tileOwner.TileAt(targetDir, targetColumn);
                }
 
@@ -51,12 +109,12 @@ namespace BattleTaterz.Core.Gameplay.TileBehaviors
                   var existing = matchDetails.Tiles.Where(t => t.TileRef == tileInRow);
                   if (existing != null && !existing.Any())
                   {
-                     // Put in a request to animate the recycling of this tile.
-                     //TODO - add an option to denote what the recycling effect should be (e.g. bomb, slow disappear, potato cat chomping away the row, etc.)
-                     tileOwner.RequestTileAnimate(tileInRow, tileInRow.Row, tileInRow.Column, matchDetails.RoundProcessed, TileAnimationRequest.AnimationType.Recycling);
+                     // Calculate stagger delay: when chomp reaches this tile
+                     float recycleDelay = fadeInDuration + pauseDuration + ((targetDir + 1) * timePerTileWidth);
 
-                     // Null out this section of the board.
-                     tileOwner.NullifyTileAt(tileInRow.Row, tileInRow.Column);
+                     tileOwner.RequestTileAnimate(tileInRow, row, col,
+                        matchDetails.RoundProcessed, TileAnimationRequest.AnimationType.Recycling, recycleDelay);
+                     tileOwner.NullifyTileAt(row, col);
                   }
                }
             }

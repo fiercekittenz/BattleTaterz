@@ -102,7 +102,7 @@ namespace BattleTaterz.Core.System
          PoolObject poolObject = null;
          while (poolObject == null)
          {
-            poolObject = _pool.Where(o => o.IsAvailable)?.ToList().First();
+            poolObject = _pool.Where(o => o.IsAvailable)?.ToList().FirstOrDefault();
             if (poolObject == null && DateTime.Now.Subtract(startTime).TotalMilliseconds > MaximumWaitInMs)
             {
                DebugLogger.Instance.Log($"The object pool has exceeded the maximum number of seconds ({MaximumWaitInMs}) allowed. Creating a new object for the pool.", LogLevel.Info);

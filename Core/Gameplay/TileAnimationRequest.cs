@@ -13,7 +13,20 @@ namespace BattleTaterz.Core.Gameplay
       {
          Static,
          Animated,
-         Recycling
+         Recycling,
+         Hold,
+         ChompAnimation
+      }
+
+      public class ChompAnimationData
+      {
+         public Godot.Node2D ChompNode { get; set; }
+         public Godot.Vector2 StartPosition { get; set; }
+         public Godot.Vector2 EndPosition { get; set; }
+         public float FadeInDuration { get; set; }
+         public float TraversalDuration { get; set; }
+         public float FadeOutDuration { get; set; }
+         public float PostEatingPause { get; set; }
       }
 
       public Tile Tile { get; set; } = null;
@@ -26,6 +39,12 @@ namespace BattleTaterz.Core.Gameplay
 
       public AnimationType Type { get; set; } = TileAnimationRequest.AnimationType.Static;
 
+      public float StaggerDelay { get; set; } = 0f;
+
+      public bool ShouldPlayDropAnimation { get; set; } = false;
+
+      public ChompAnimationData ChompData { get; set; }
+
       /// <summary>
       /// Specialized comparison method override.
       /// </summary>
@@ -35,9 +54,9 @@ namespace BattleTaterz.Core.Gameplay
       {
          if (obj is TileAnimationRequest otherRequest)
          {
-            string logLine = $"Tile.Equals() NAME: {Tile.Name}/{otherRequest.Tile.Name}, ROW: {Tile.Row}/{otherRequest.Row}, COLUMN: {Tile.Column}/{otherRequest.Column}, ROUNDMOVED: {RoundMoved}/{otherRequest.RoundMoved}, TYPE: {(int)Type}/{(int)otherRequest.Type}";
+            string logLine = $"Tile.Equals() NAME: {Tile?.Name}/{otherRequest.Tile?.Name}, ROW: {Tile?.Row ?? -1}/{otherRequest.Row}, COLUMN: {Tile?.Column ?? -1}/{otherRequest.Column}, ROUNDMOVED: {RoundMoved}/{otherRequest.RoundMoved}, TYPE: {(int)Type}/{(int)otherRequest.Type}";
 
-            if (Tile.Name == otherRequest.Tile.Name &&
+            if (Tile?.Name == otherRequest.Tile?.Name &&
                     Row == otherRequest.Row &&
                     Column == otherRequest.Column &&
                     RoundMoved == otherRequest.RoundMoved &&
@@ -59,7 +78,7 @@ namespace BattleTaterz.Core.Gameplay
       /// <returns></returns>
       public override string ToString()
       {
-         return $"Tile.ToString() NAME: {Tile.Name}, ROW: {Tile.Row}, COLUMN: {Tile.Column}, ROUNDMOVED: {RoundMoved}, TYPE: {(int)Type}";
+         return $"Tile.ToString() NAME: {Tile?.Name ?? (Type == AnimationType.ChompAnimation ? "[Chomp]" : "[Hold]")}, ROW: {Tile?.Row ?? -1}, COLUMN: {Tile?.Column ?? -1}, ROUNDMOVED: {RoundMoved}, TYPE: {(int)Type}";
       }
    }
 }
