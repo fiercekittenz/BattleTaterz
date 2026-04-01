@@ -1139,12 +1139,13 @@ public partial class GameBoard : Node2D
             }
          }
 
-         // Remove positions eliminated by behaviors (e.g. chomp tater's
-         // entire row/column) so tiles landing there skip DropAnimation.
+         // Add positions eliminated by behaviors (e.g. chomp tater's
+         // entire row/column) so tiles cascading into those spots also
+         // play DropAnimation after the chomp tater finishes.
          foreach (var result in triggerResults)
          {
             if (result.EliminatedPositions != null)
-               matchedPositions.ExceptWith(result.EliminatedPositions);
+               matchedPositions.UnionWith(result.EliminatedPositions);
          }
          allTriggerResults.AddRange(triggerResults);
       }
